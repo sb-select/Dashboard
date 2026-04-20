@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>호정·득희 자금관리 v7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:#070d14;color:#dde6f0;font-size:15px}
+:root{
+  --bg0:#070d14;--bg1:#0d1825;--bg2:#152234;--bg3:#1c2e44;--bg4:#243a54;
+  --green:#1de9b6;--g2:rgba(29,233,182,.14);--g3:rgba(29,233,182,.07);
+  --blue:#5096f8;--b2:rgba(80,150,248,.14);--b3:rgba(80,150,248,.07);
+  --red:#f05070;--r2:rgba(240,80,112,.14);--r3:rgba(240,80,112,.07);
+  --amber:#f5a030;--a2:rgba(245,160,48,.14);--a3:rgba(245,160,48,.07);
+  --purple:#b090f8;--p2:rgba(176,144,248,.14);--p3:rgba(176,144,248,.07);
+  --sky:#22d3ee;
+  --t1:#dde6f0;--t2:#8eaac8;--t3:#4e6880;--t4:#2c4060;
+  --border:rgba(80,150,248,.1);--border2:rgba(80,150,248,.28);--border3:rgba(255,255,255,.06);
+  --r:8px;--r2k:12px;--r3:16px;
+  --mono:'IBM Plex Mono',monospace;
+}
+.app{display:flex;height:100vh;overflow:hidden}
+/* sidebar */
+.sb{width:200px;flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sb-head{padding:18px 16px 15px;border-bottom:1px solid var(--border)}
+.sb-brand{font-size:14px;font-weight:600;color:var(--t1)}
+.sb-ver{font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--mono)}
+.sb-sec{font-size:9px;font-weight:600;letter-spacing:1.4px;color:var(--t4);padding:13px 16px 5px;text-transform:uppercase}
+.nav{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--t2);font-size:13px;border-left:2px solid transparent;transition:all .12s;user-select:none;white-space:nowrap}
+.nav:hover{color:var(--t1);background:var(--b3)}
+.nav.on{color:var(--blue);font-weight:500;background:var(--b3);border-left-color:var(--blue)}
+.nav svg{width:14px;height:14px;flex-shrink:0;opacity:.55}.nav.on svg{opacity:1}
+.nbadge{margin-left:auto;font-size:9px;padding:2px 7px;border-radius:20px;font-family:var(--mono);flex-shrink:0}
+.ng{background:rgba(29,233,182,.18);color:var(--green)}.no{background:rgba(245,160,48,.18);color:var(--amber)}.nr{background:rgba(240,80,112,.18);color:var(--red)}
+.sb-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);flex-shrink:0}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 2.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
+.pg-title{font-size:16px;font-weight:600;color:var(--t1)}
+.pg-sub{font-size:12px;color:var(--t3);margin-top:2px}
+.tb-ver{font-size:13px;font-weight:600;color:var(--blue);font-family:var(--mono);background:var(--b3);border:1px solid var(--border2);padding:5px 14px;border-radius:20px}
+.content{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg0)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+/* tabs */
+.mo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.mo-tab{padding:6px 14px;border-radius:20px;background:transparent;border:1px solid var(--border2);color:var(--t2);font-size:13px;cursor:pointer;transition:all .12s;font-family:'IBM Plex Sans KR',sans-serif}
+.mo-tab:hover{border-color:var(--blue);color:var(--blue)}
+.mo-tab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
+.sub-tabs{display:flex;gap:5px;margin-bottom:14px}
+.sub-tab{padding:5px 14px;border-radius:20px;background:transparent;border:1px solid var(--border2);color:var(--t2);font-size:12px;cursor:pointer;transition:all .12s}
+.sub-tab.on{background:var(--bg3);border-color:var(--border2);color:var(--t1);font-weight:500}
+/* hero cards */
+.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.hero-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.hero-card{border-radius:var(--r3);padding:18px 20px;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.hero-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.hero-card::after{content:'탭하여 상세 ▾';position:absolute;bottom:12px;right:14px;font-size:10px;opacity:.45;font-family:var(--mono)}
+.hc-green{background:linear-gradient(140deg,rgba(29,233,182,.1),rgba(29,233,182,.02));border:1px solid rgba(29,233,182,.28)}
+.hc-amber{background:linear-gradient(140deg,rgba(245,160,48,.1),rgba(245,160,48,.02));border:1px solid rgba(245,160,48,.28)}
+.hc-blue{background:linear-gradient(140deg,rgba(80,150,248,.12),rgba(80,150,248,.03));border:2px solid rgba(80,150,248,.4)}
+.hc-red{background:linear-gradient(140deg,rgba(240,80,112,.1),rgba(240,80,112,.02));border:1px solid rgba(240,80,112,.28)}
+.hc-purple{background:linear-gradient(140deg,rgba(176,144,248,.1),rgba(176,144,248,.02));border:1px solid rgba(176,144,248,.28)}
+.hc-sky{background:linear-gradient(140deg,rgba(34,211,238,.1),rgba(34,211,238,.02));border:1px solid rgba(34,211,238,.28)}
+.hc-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.hc-val{font-size:32px;font-weight:600;font-family:var(--mono);letter-spacing:-1px;line-height:1.1}
+.hc-sub{font-size:12px;color:var(--t2);margin-top:8px;line-height:1.5}
+.hc-delta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-family:var(--mono);font-weight:500;padding:3px 10px;border-radius:20px;margin-top:10px}
+.d-up{background:rgba(29,233,182,.15);color:var(--green)}.d-dn{background:rgba(240,80,112,.15);color:var(--red)}.d-eq{background:rgba(255,255,255,.07);color:var(--t2)}
+/* kpi cards */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.kgrid-wide{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px}
+.kc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2k);padding:14px 16px;transition:all .12s}
+.kc.click{cursor:pointer}.kc.click:hover{border-color:var(--border2);transform:translateY(-1px)}
+.klb{font-size:12px;color:var(--t2);margin-bottom:5px;font-weight:500}
+.kval{font-size:22px;font-weight:600;font-family:var(--mono);letter-spacing:-.5px;line-height:1.2}
+.ksub{font-size:12px;color:var(--t3);margin-top:4px}
+.ktag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;margin-top:5px;font-family:var(--mono)}
+.vg{color:var(--green)}.vr{color:var(--red)}.vb{color:var(--blue)}.vo{color:var(--amber)}.vp{color:var(--purple)}.v2{color:var(--t2)}.vsk{color:var(--sky)}
+.tg{background:var(--g2);color:var(--green)}.tb{background:var(--b2);color:var(--blue)}.to{background:var(--a2);color:var(--amber)}.tr2{background:var(--r2);color:var(--red)}.tp{background:var(--p2);color:var(--purple)}.tn{background:rgba(255,255,255,.07);color:var(--t2)}
+/* panel */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2k);padding:16px 18px;margin-bottom:14px}
+.panel-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.pt{font-size:11px;font-weight:600;color:var(--t3);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.9px}
+.ptr{font-size:11px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--mono)}
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--t3);font-weight:500;padding:6px 9px;border-bottom:1px solid var(--border2);font-size:11px;letter-spacing:.3px;text-transform:uppercase}
+td{padding:8px 9px;border-bottom:1px solid var(--border3);color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(80,150,248,.025)}
+.mono{font-family:var(--mono)}.tr{font-family:var(--mono);text-align:right}
+tr.tot td{font-weight:600;background:rgba(29,233,182,.05)}
+/* badge */
+.bdg{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--mono);white-space:nowrap}
+.bg2{background:var(--g2);color:var(--green)}.br2{background:var(--r2);color:var(--red)}.bb2{background:var(--b2);color:var(--blue)}.bo2{background:var(--a2);color:var(--amber)}.bp2{background:var(--p2);color:var(--purple)}.bn2{background:rgba(255,255,255,.07);color:var(--t2)}
+/* bar */
+.pr-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.pr-lbl{font-size:13px;color:var(--t1);width:150px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-wrap{flex:1;background:rgba(255,255,255,.05);border-radius:3px;height:6px;overflow:hidden}
+.pr-fill{height:6px;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.pr-val{font-size:12px;color:var(--t2);width:120px;text-align:right;flex-shrink:0;font-family:var(--mono)}
+/* tips/flow */
+.tip{padding:10px 13px;border-radius:var(--r);margin-bottom:9px;font-size:13px;color:var(--t2);line-height:1.7;border-left:2px solid}
+.tg2{background:var(--g3);border-color:var(--green)}.to2{background:var(--a3);border-color:var(--amber)}.tb2{background:var(--b3);border-color:var(--blue)}.tr3{background:var(--r3);border-color:var(--red)}.tp2{background:var(--p3);border-color:var(--purple)}
+.flow-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap}
+.fn{flex:1;padding:8px 10px;border-radius:var(--r);font-size:12px;text-align:center;line-height:1.6;border:1px solid;min-width:80px}
+.fn-g{background:var(--g3);border-color:rgba(29,233,182,.3);color:var(--green)}.fn-b{background:var(--b3);border-color:rgba(80,150,248,.3);color:var(--blue)}.fn-o{background:var(--a3);border-color:rgba(245,160,48,.3);color:var(--amber)}.fn-p{background:var(--p3);border-color:rgba(176,144,248,.3);color:var(--purple)}.fn-n{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.09);color:var(--t2)}
+.farr{font-size:14px;color:var(--t4);flex-shrink:0}
+/* section */
+.sec{display:none}.sec.on{display:block}
+.sdiv{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);padding:4px 0 9px;border-bottom:1px solid var(--border);margin-bottom:11px}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(4,8,14,.92);z-index:1000;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal-bg.on{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2k);width:90%;max-width:640px;max-height:700px;overflow-y:auto;padding:20px 22px;position:relative}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:3px;color:var(--t1)}
+.modal-sub{font-size:12px;color:var(--t3);margin-bottom:16px}
+.modal-close{position:absolute;right:14px;top:14px;width:28px;height:28px;border-radius:var(--r);background:rgba(255,255,255,.05);border:none;color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--r3);color:var(--red)}
+/* room */
+.room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+.room-card{border-radius:var(--r);padding:12px 13px;border:1px solid;position:relative;cursor:pointer;transition:all .12s}
+.room-card:hover{transform:translateY(-1px)}
+.room-card.leased{background:rgba(29,233,182,.05);border-color:rgba(29,233,182,.25)}
+.room-card.coming{background:rgba(80,150,248,.05);border-color:rgba(80,150,248,.25)}
+.room-card.vacant{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.07)}
+.room-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%}
+.edit-input{width:100%;padding:8px 11px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--border2);color:var(--t1);font-size:13px;font-family:'IBM Plex Sans KR',sans-serif;outline:none;margin-bottom:9px}
+.edit-input:focus{border-color:var(--blue)}
+.edit-label{font-size:12px;color:var(--t3);margin-bottom:4px;display:block}
+/* debt bar */
+.debt-bar-wrap{height:9px;background:rgba(255,255,255,.05);border-radius:5px;overflow:hidden;margin:5px 0 3px}
+.debt-bar-fill{height:9px;border-radius:5px}
+/* scenario */
+.scenario-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2k);padding:18px 20px;margin-bottom:14px}
+.slider-wrap{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+input[type=range]{flex:1;height:4px;accent-color:var(--blue);cursor:pointer}
+.scenario-result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.sr-item{background:var(--bg2);border-radius:var(--r);padding:12px 14px;text-align:center}
+.sr-label{font-size:12px;color:var(--t3);margin-bottom:5px}
+.sr-val{font-size:18px;font-weight:600;font-family:var(--mono)}
+/* milestone */
+.ms-event{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2k);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .12s}
+.ms-event:hover{border-color:var(--border2)}
+/* concept banner */
+.concept-banner{background:rgba(80,150,248,.06);border:1px solid rgba(80,150,248,.2);border-radius:var(--r2k);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--t2);line-height:1.7}
+/* ai comment */
+.ai-comment{background:linear-gradient(135deg,rgba(176,144,248,.08),rgba(80,150,248,.05));border:1px solid rgba(176,144,248,.2);border-radius:var(--r2k);padding:12px 16px;margin-top:12px;font-size:13px;color:var(--t2);line-height:1.7}
+.ai-comment-label{font-size:10px;font-weight:600;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+/* hive bg */
+.hive-bg-wrap{position:relative;border-radius:var(--r2k);overflow:hidden;margin-bottom:14px}
+.hive-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(7,13,20,.85) 0%,rgba(13,24,37,.75) 50%,rgba(7,13,20,.9) 100%);z-index:1}
+.hive-bg-img{position:absolute;inset:0;background:linear-gradient(135deg,#0d1825 0%,#152234 40%,#1c2e44 100%);z-index:0;overflow:hidden}
+.hive-bg-img::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(29,233,182,.03) 0px,rgba(29,233,182,.03) 1px,transparent 1px,transparent 20px),repeating-linear-gradient(-45deg,rgba(80,150,248,.03) 0px,rgba(80,150,248,.03) 1px,transparent 1px,transparent 20px)}
+.hive-bg-inner{position:relative;z-index:2;padding:20px}
+/* credit score ring */
+.score-ring{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ring-val{font-size:28px;font-weight:600;font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="m-title"></div>
+    <div class="modal-sub" id="m-sub"></div>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<div class="app">
+<div class="sb">
+  <div class="sb-head">
+    <div class="sb-brand">호정·득희 자금관리</div>
+    <div class="sb-ver">v7 · 구글시트 연동</div>
+  </div>
+  <div class="sb-sec">핵심 지표</div>
+  <div class="nav on" onclick="nav('networth',this)">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M2 13l3.5-4.5 3 2.5L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="4" r="1.5" fill="currentColor"/></svg>
+    현금성 순자산 <span class="nbadge ng">#1</span>
+  </div>
+  <div class="nav" onclick="nav('totalasset',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M4 8h8M4 5h5M4 11h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    총 자산 현황
+  </div>
+  <div class="sb-sec">사업</div>
+  <div class="nav" onclick="nav('hive',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="4" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="6" y="4" width="4" height="11" rx="1" fill="currentColor"/><rect x="11" y="1" width="4" height="14" rx="1" fill="currentColor" opacity=".5"/></svg>
+    잠실하이브 <span class="nbadge ng">#2</span>
+  </div>
+  <div class="nav" onclick="nav('sl',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 8h6M5 5.5h4M5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    서울린지 <span class="nbadge no">#3</span>
+  </div>
+  <div class="nav" onclick="nav('bd',this)">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 6v8h4v-4h4v4h4V6L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    하이브비래 <span class="nbadge no">#3</span>
+  </div>
+  <div class="sb-sec">가계</div>
+  <div class="nav" onclick="nav('household',this)">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M1 6.5h14" stroke="currentColor" stroke-width="1.2"/><rect x="3" y="9" width="3" height="1.5" rx=".5" fill="currentColor" opacity=".7"/></svg>
+    가계 수입·지출 <span class="nbadge no">#4</span>
+  </div>
+  <div class="nav" onclick="nav('debts',this)">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    부채 현황 <span class="nbadge nr">#5</span>
+  </div>
+  <div class="nav" onclick="nav('credit',this)">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    신용·소득 현황
+  </div>
+  <div class="nav" onclick="nav('milestone',this)">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M2 12L5 8l3 3 5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    마일스톤
+  </div>
+  <div class="nav" onclick="nav('kakao',this)">
+    <svg viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="7" rx="6" ry="5" stroke="currentColor" stroke-width="1.4"/><path d="M5 10.5l1-2.5M8 13V11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5.5" cy="7" r="1" fill="currentColor"/><circle cx="8" cy="7" r="1" fill="currentColor"/><circle cx="10.5" cy="7" r="1" fill="currentColor"/></svg>
+    카카오 알림 <span class="nbadge ng">ON</span>
+  </div>
+  <div class="nav" id="nav-settings" onclick="nav('settings',this)">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    설정
+  </div>
+  <div class="sb-foot"><span class="pulse"></span><span id="sb-sync-time">기준일: 로딩중</span></div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div><div class="pg-title" id="page-title">현금성 순자산</div><div class="pg-sub" id="page-sub">내가 실제로 부자가 되고 있는가?</div></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="sync-status" style="font-size:11px;color:var(--t3);font-family:var(--mono)">로딩 중...</div>
+      <button onclick="syncAll()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--blue);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif" id="sync-btn">↻ 새로고침</button>
+      <button onclick="nav('settings',document.getElementById('nav-settings'))" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif">⚙ 설정</button>
+      <div class="tb-ver">v7 · 구글시트</div>
+    </div>
+  </div>
+  <div class="content">
+
+<!-- ① 현금성 순자산 -->
+<div id="s-networth" class="sec on">
+  <div class="mo-tabs" id="nw-tabs">
+    <button class="mo-tab on" onclick="setNWMo('all',this)">전체 추이</button>
+    <button class="mo-tab" onclick="setNWMo('2026-01',this)">1월</button>
+    <button class="mo-tab" onclick="setNWMo('2026-02',this)">2월</button>
+    <button class="mo-tab" onclick="setNWMo('2026-03',this)">3월</button>
+    <button class="mo-tab" onclick="setNWMo('2026-04',this)">4월 (현재)</button>
+  </div>
+  <div class="concept-banner">
+    <strong style="color:var(--blue)">현금성 순자산</strong> = 일반계좌 + 세이프박스 + <strong style="color:var(--sky)">신협(진우하우스) 보증금 수취액</strong> &nbsp;|&nbsp;
+    <strong style="color:var(--amber)">투자자산</strong> = 하이브비래 수리비 누적 + <strong style="color:var(--purple)">서울린지 대여금</strong>(농산물 위탁사업 운영자금, 매출 발생 중) &nbsp;|&nbsp;
+    <strong style="color:var(--green)">실질 총자산</strong> = 합산 지표
+  </div>
+  <div id="nw-hero-area"></div>
+  <div class="panel" id="nw-chart-panel">
+    <div class="pt">실질 총자산 월별 추이 <span class="ptr">만원</span></div>
+    <div style="position:relative;height:220px"><canvas id="c-nw"></canvas></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;margin-bottom:8px">
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--t3)"><span style="width:12px;height:12px;background:rgba(29,233,182,.3);border-radius:2px;display:inline-block"></span>현금성 순자산</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--t3)"><span style="width:12px;height:12px;background:rgba(245,160,48,.35);border-radius:2px;display:inline-block"></span>투자자산(하이브비래)</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--t3)"><span style="width:12px;height:3px;background:var(--blue);display:inline-block"></span>실질 총자산 라인</span>
+    </div>
+    <div class="ai-comment" id="nw-ai-comment"></div>
+  </div>
+  <div id="nw-detail-area"></div>
+</div>
+
+<!-- 총 자산 현황 -->
+<div id="s-totalasset" class="sec">
+  <div class="hero-grid">
+    <div class="hero-card hc-blue" onclick="openModal('ta_total')">
+      <div class="hc-label" style="color:var(--blue)">★ 총 자산 합계</div>
+      <div class="hc-val" style="color:var(--blue)">22억<br><span style="font-size:20px">8,600만</span></div>
+      <div class="hc-sub">금융+부동산+퇴직금 합산</div>
+      <span class="hc-delta d-up">▲ 부채 차감 순자산 ~12억</span>
+    </div>
+    <div class="hero-card hc-amber" onclick="openModal('ta_real')">
+      <div class="hc-label" style="color:var(--amber)">🏠 투자부동산</div>
+      <div class="hc-val" style="color:var(--amber)">13억<br><span style="font-size:20px">5,000만</span></div>
+      <div class="hc-sub">하이브비래 8.5억 + 평창리 4.5억 + 잠실 임차보증금 1억</div>
+      <span class="hc-delta d-eq">목표 매도 시 차익 ~3.1억</span>
+    </div>
+    <div class="hero-card hc-green" onclick="openModal('ta_fin')">
+      <div class="hc-label" style="color:var(--green)">💰 금융+퇴직금</div>
+      <div class="hc-val" style="color:var(--green)">3억<br><span style="font-size:20px">6,600만</span></div>
+      <div class="hc-sub">현금성 6,730만 + 퇴직금 1.9억 + SNP 500만 + 대여금 1,650만</div>
+      <span class="hc-delta d-up">▲ 퇴직금 미수령 포함</span>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="pt">자산 구성 상세</div>
+    <div id="ta-bars"></div>
+    <table style="margin-top:14px">
+      <thead><tr><th>자산명</th><th>분류</th><th>소유</th><th style="text-align:right">금액</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>하이브비래 (비래동)</td><td><span class="bdg bo2">투자부동산</span></td><td><span class="bdg bb2">득희</span></td><td class="tr vo">850,000,000</td><td style="font-size:11px;color:var(--t3)">목표 매도가</td></tr>
+        <tr><td>평창리 토지</td><td><span class="bdg bo2">투자부동산</span></td><td><span class="bdg bn2">공동</span></td><td class="tr vo">450,000,000</td><td style="font-size:11px;color:var(--t3)">용인시 처인구</td></tr>
+        <tr><td>잠실하이브 임차보증금</td><td><span class="bdg bo2">부동산</span></td><td><span class="bdg bg2">호정</span></td><td class="tr vo">100,000,000</td><td style="font-size:11px;color:var(--t3)">사업 임차</td></tr>
+        <tr><td>현금성 순자산</td><td><span class="bdg bb2">금융</span></td><td><span class="bdg bn2">공동</span></td><td class="tr vg">67,301,694</td><td style="font-size:11px;color:var(--t3)">4/13 현재</td></tr>
+        <tr><td>서울린지 대여금</td><td><span class="bdg bp2">채권</span></td><td><span class="bdg bg2">호정</span></td><td class="tr vp">16,500,000</td><td style="font-size:11px;color:var(--t3)">농산물 운영자금</td></tr>
+        <tr><td>미국 S&P ETF</td><td><span class="bdg bb2">금융</span></td><td><span class="bdg bn2">공동</span></td><td class="tr vb">5,000,000</td><td style="font-size:11px;color:var(--t3)">투자 중</td></tr>
+        <tr><td>퇴직금 예상 (호정)</td><td><span class="bdg tn">퇴직금</span></td><td><span class="bdg bg2">호정</span></td><td class="tr v2">130,000,000</td><td style="font-size:11px;color:var(--t3)">현재 기준 예상</td></tr>
+        <tr><td>퇴직금 예상 (득희)</td><td><span class="bdg tn">퇴직금</span></td><td><span class="bdg bb2">득희</span></td><td class="tr v2">60,000,000</td><td style="font-size:11px;color:var(--t3)">현재 기준 예상</td></tr>
+        <tr class="tot"><td colspan="3">총 자산 합계</td><td class="tr vb">1,678,801,694</td><td></td></tr>
+        <tr style="background:rgba(240,80,112,.05)"><td colspan="3">총 부채</td><td class="tr vr">939,400,000</td><td></td></tr>
+        <tr class="tot"><td colspan="3">★ 순자산 (자산-부채)</td><td class="tr vg" style="font-size:15px">739,401,694</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ② 잠실하이브 -->
+<div id="s-hive" class="sec">
+  <div class="mo-tabs" id="hive-tabs">
+    <button class="mo-tab on" onclick="setHiveMo('all',this)">전체</button>
+    <button class="mo-tab" onclick="setHiveMo('2025-12',this)">12월</button>
+    <button class="mo-tab" onclick="setHiveMo('2026-01',this)">1월</button>
+    <button class="mo-tab" onclick="setHiveMo('2026-02',this)">2월</button>
+    <button class="mo-tab" onclick="setHiveMo('2026-03',this)">3월</button>
+  </div>
+  <div class="hive-bg-wrap">
+    <div class="hive-bg-img"></div>
+    <div class="hive-bg"></div>
+    <div class="hive-bg-inner" id="hive-hero-area"></div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">OTA 채널별 매출</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px" id="hive-legend"></div>
+      <div style="position:relative;height:180px"><canvas id="c-ota"></canvas></div>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">Top 고정비 누적 <span class="ptr" id="hive-fixed-title-r">4개월 합계</span></div>
+      <div id="hive-fixed-bars"></div>
+      <div class="tip tb2" style="margin-top:8px;margin-bottom:0">임차료·외주용역비가 고정비의 80%+. 위탁구조상 협상 여지 확인 필요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 서울린지 -->
+<div id="s-sl" class="sec">
+  <div class="mo-tabs" id="sl-tabs">
+    <button class="mo-tab on" onclick="setSlMo('all',this)">전체</button>
+    <button class="mo-tab" onclick="setSlMo('2026-01',this)">1월</button>
+    <button class="mo-tab" onclick="setSlMo('2026-02',this)">2월</button>
+    <button class="mo-tab" onclick="setSlMo('2026-03',this)">3월</button>
+    <button class="mo-tab" onclick="setSlMo('2026-04',this)">4월</button>
+  </div>
+  <div id="sl-hero-area"></div>
+  <div id="sl-detail-area"></div>
+</div>
+
+<!-- ③ 하이브비래 -->
+<div id="s-bd" class="sec">
+  <div class="kgrid-wide">
+    <div class="kc click" onclick="openModal('bd_cost')"><div class="klb">낙찰가</div><div class="kval vb">5억 5,400만</div><div class="ksub">신협 경락대출 담보</div></div>
+    <div class="kc click" onclick="openModal('bd_debt')"><div class="klb">경락대출 (신협)</div><div class="kval vr">4억 9,505만</div><div class="ksub">4.70% / 납부일 매월 19일</div></div>
+    <div class="kc click" onclick="openModal('bd_invest')">
+      <div class="klb">자기자본 투입</div>
+      <div class="kval vo">5,824만</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">취득비 1,383만 + 공사비 2,241만 + 기타 200만</div>
+    </div>
+    <div class="kc click" onclick="openModal('bd_interest')">
+      <div class="klb">월이자 (납부일 19일)</div>
+      <div class="kval vr">191만</div>
+      <div class="ksub">연이자 약 2,296만</div>
+    </div>
+    <div class="kc click" onclick="openModal('bd_rent')">
+      <div class="klb">현재 월세 (3가구)</div>
+      <div class="kval vg">205만</div>
+      <div class="ktag tg">이자커버 107% ▾</div>
+    </div>
+    <div class="kc click" onclick="openModal('bd_sell')">
+      <div class="klb">목표 매도가</div>
+      <div class="kval vg">8억 5,000만</div>
+      <div class="ksub">예상차익 ~3.1억 ▾</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="pt">자본 구조</div>
+    <div style="display:flex;height:22px;border-radius:8px;overflow:hidden;margin-bottom:8px">
+      <div style="width:89.4%;background:var(--red);opacity:.75;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-family:var(--mono)">부채 89.4% — 495,054,399원</div>
+      <div style="width:10.6%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;color:#070d14;font-family:var(--mono)">자본</div>
+    </div>
+    <div class="tip to2">월이자 납부일: 매월 19일 / 현재 월세 2,050,000원 → 이자 커버율 107% ✓</div>
+  </div>
+  <div class="panel">
+    <div class="pt">호실 현황 — 클릭하여 편집 <span class="ptr">9가구</span></div>
+    <div class="room-grid" id="room-grid"></div>
+    <table>
+      <thead><tr><th>구분</th><th style="text-align:right">보증금</th><th style="text-align:right">월세</th><th>가구수</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>현재 임차</td><td class="tr vg">1,900만</td><td class="tr vg">205만</td><td>3가구</td><td style="font-size:11px;color:var(--t3)">강귀남·진선빌·LINA</td></tr>
+        <tr style="background:rgba(80,150,248,.05)"><td style="color:var(--blue)">4/20 후</td><td class="tr vb">2,600만</td><td class="tr vb">265만</td><td>4가구</td><td style="font-size:11px;color:var(--t3)">+황문진 301호</td></tr>
+        <tr><td>전체 목표</td><td class="tr">4,900만</td><td class="tr">480만</td><td>9가구</td><td style="font-size:11px;color:var(--t3)">이자 커버율 251%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="pt">공사비 내역 <span class="ptr" id="bd-cost-total">총 22,406,216원</span></div>
+    <div id="bd-bars"></div>
+  </div>
+</div>
+
+<!-- ④ 가계 수입·지출 -->
+<div id="s-household" class="sec">
+  <div class="sub-tabs" id="hh-sub-tabs">
+    <button class="sub-tab on" onclick="setHHTab('income',this)">수입</button>
+    <button class="sub-tab" onclick="setHHTab('expense',this)">지출</button>
+  </div>
+  <div class="mo-tabs" id="hh-tabs">
+    <button class="mo-tab on" onclick="setHhMo('all',this)">전체</button>
+    <button class="mo-tab" onclick="setHhMo('2026-01',this)">1월</button>
+    <button class="mo-tab" onclick="setHhMo('2026-02',this)">2월</button>
+    <button class="mo-tab" onclick="setHhMo('2026-03',this)">3월</button>
+    <button class="mo-tab" onclick="setHhMo('2026-04',this)">4월</button>
+  </div>
+  <div id="hh-hero-area"></div>
+  <div id="hh-income-section">
+    <div class="panel-row">
+      <div class="panel" style="margin-bottom:0">
+        <div class="pt" id="hh-inc-chart-title">월별 수입 구성</div>
+        <div style="position:relative;height:180px"><canvas id="c-hh-income"></canvas></div>
+      </div>
+      <div class="panel" style="margin-bottom:0">
+        <div class="pt">수입 상세</div>
+        <div id="hh-inc-detail"></div>
+      </div>
+    </div>
+  </div>
+  <div id="hh-expense-section" style="display:none">
+    <div class="panel-row">
+      <div class="panel" style="margin-bottom:0">
+        <div class="pt" id="hh-fixed-title">고정비 상세</div>
+        <div id="hh-fixed-detail"></div>
+      </div>
+      <div class="panel" style="margin-bottom:0">
+        <div class="pt" id="hh-var-title">변동비 카테고리</div>
+        <div id="hh-var-bars"></div>
+      </div>
+    </div>
+    <div class="scenario-box">
+      <div class="pt" style="margin-bottom:14px">💡 변동비 절약 시나리오</div>
+      <div class="slider-wrap">
+        <span style="font-size:13px;color:var(--t2);white-space:nowrap">월 절약 목표</span>
+        <input type="range" id="save-slider" min="0" max="200" value="50" step="5" oninput="updateScenario()">
+        <span style="font-size:16px;font-weight:600;font-family:var(--mono);color:var(--blue);min-width:80px" id="save-slider-val">50만원</span>
+      </div>
+      <div class="scenario-result" id="scenario-result"></div>
+    </div>
+    <div class="panel">
+      <div class="pt">월별 지출 증감 <span class="ptr">전월 대비 %</span></div>
+      <div id="hh-change-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 부채 현황 -->
+<div id="s-debts" class="sec">
+  <div class="hero-grid">
+    <div class="hero-card hc-red" onclick="openModal('debt_total')">
+      <div class="hc-label" style="color:var(--red)">총 부채</div>
+      <div class="hc-val" style="color:var(--red)">9억<br><span style="font-size:22px">3,940만</span></div>
+      <div class="hc-sub">호정 4억 420만 + 득희 5억 3,920만</div>
+      <div class="hc-delta d-dn">▼ 월이자 295.5만 납부 중</div>
+    </div>
+    <div class="hero-card hc-amber" onclick="openModal('debt_priority')">
+      <div class="hc-label" style="color:var(--amber)">⚠ 우선 대응</div>
+      <div class="hc-val" style="color:var(--amber)">카카오뱅크<br><span style="font-size:22px">3,000만</span></div>
+      <div class="hc-sub">5.505% — 2026.09 만기 임박</div>
+      <div class="hc-delta d-dn">▼ 6월까지 대환/연장 결정</div>
+    </div>
+    <div class="hero-card hc-purple" onclick="openModal('debt_interest')">
+      <div class="hc-label" style="color:var(--purple)">월 이자 합계</div>
+      <div class="hc-val" style="color:var(--purple)">295.5<span style="font-size:20px">만</span></div>
+      <div class="hc-sub">원금 만기 일시상환 구조</div>
+      <div class="hc-delta d-dn">연간 이자 부담 3,546만</div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">호정 대출 현황</div>
+      <div id="debt-hj"></div>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">득희 대출 현황</div>
+      <div id="debt-dh"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="pt">상환 우선순위</div>
+    <div class="tip tr3"><strong>① 득희 토스뱅크 대환 7.38%</strong> — 최고금리. 여유자금 발생 시 최우선 상환.</div>
+    <div class="tip to2"><strong>② 카카오뱅크 5.505%</strong> — 2026.09 만기. 6월까지 연장 또는 대환 결정.</div>
+    <div class="tip tb2"><strong>③ 우리WON 4.51%</strong> — 2027.02 갱신 완료. 이수기일(2026.03) 경과 — 추가 조치 불필요.</div>
+    <div class="tip tg2"><strong>경락대출 4.70%</strong> — 비래동 임대수익으로 이자 커버 중. 유지 필요.</div>
+  </div>
+</div>
+
+<!-- 신용·소득 현황 -->
+<div id="s-credit" class="sec">
+  <div class="hero-grid">
+    <div class="hero-card hc-blue" onclick="openModal('credit_hj')">
+      <div class="hc-label" style="color:var(--blue)">호정 신용점수</div>
+      <div style="display:flex;gap:20px;margin:10px 0">
+        <div class="score-ring"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">KCB</div><div class="ring-val vb">910</div><div style="font-size:11px;color:var(--t3)">상위 44%</div></div>
+        <div class="score-ring"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">NICE</div><div class="ring-val vg">896</div><div style="font-size:11px;color:var(--t3)">상위 49%</div></div>
+      </div>
+      <div class="hc-sub">예상 최저 금리 5.29%</div>
+      <span class="hc-delta d-eq">24년 근로소득 9,286만</span>
+    </div>
+    <div class="hero-card hc-green" onclick="openModal('credit_dh')">
+      <div class="hc-label" style="color:var(--green)">득희 신용점수</div>
+      <div style="display:flex;gap:20px;margin:10px 0">
+        <div class="score-ring"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">KCB</div><div class="ring-val vg">927</div><div style="font-size:11px;color:var(--t3)">상위 39%</div></div>
+        <div class="score-ring"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">NICE</div><div class="ring-val vg">854</div><div style="font-size:11px;color:var(--t3)">상위 58%</div></div>
+      </div>
+      <div class="hc-sub">예상 최저 금리 5.29%</div>
+      <span class="hc-delta d-eq">24년 근로소득 7,122만</span>
+    </div>
+    <div class="hero-grid-2" style="grid-column:span 1;display:contents">
+      <div class="hero-card hc-amber" onclick="openModal('credit_dsr_hj')">
+        <div class="hc-label" style="color:var(--amber)">호정 DSR</div>
+        <div class="hc-val" style="color:var(--amber)">38.1%</div>
+        <div class="hc-sub">연소득 9,286만 / 연이자 3,546만</div>
+        <span class="hc-delta d-dn">⚠ 40% 규제 한도 근접</span>
+      </div>
+      <div class="hero-card hc-red" onclick="openModal('credit_dsr_dh')">
+        <div class="hc-label" style="color:var(--red)">득희 DSR</div>
+        <div class="hc-val" style="color:var(--red)">72.4%</div>
+        <div class="hc-sub">연소득 7,122만 / 연이자 5,154만</div>
+        <span class="hc-delta d-dn">⚠ 비래동 경락대출 포함 고DSR</span>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">호정 소득 현황</div>
+      <table>
+        <thead><tr><th>연도</th><th>소득구분</th><th style="text-align:right">총급여/수입</th><th style="text-align:right">소득금액</th></tr></thead>
+        <tbody>
+          <tr><td>2024년</td><td>근로(누비지오)</td><td class="tr vg">92,866,504</td><td class="tr v2">78,473,179</td></tr>
+          <tr><td>2023년</td><td>사업+근로 합산</td><td class="tr vg">181,767,942</td><td class="tr v2">78,473,179</td></tr>
+          <tr style="background:rgba(80,150,248,.05)"><td>2025년</td><td>근로(1~6월)</td><td class="tr vb">53,384,968</td><td class="tr v2">연환산 약 9,143만</td></tr>
+          <tr style="background:rgba(245,160,48,.06)"><td colspan="2" style="color:var(--amber)">2025.07.01~ 육아휴직 중</td><td colspan="2" class="tr vo">육아휴직급여 수령</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <div class="pt">득희 소득 현황</div>
+      <table>
+        <thead><tr><th>연도</th><th>소득구분</th><th style="text-align:right">총급여/수입</th><th style="text-align:right">소득금액</th></tr></thead>
+        <tbody>
+          <tr><td>2024년</td><td>근로(누비지오)</td><td class="tr vg">71,227,360</td><td class="tr v2">57,915,992</td></tr>
+          <tr><td>2024년</td><td>사업(한화손보)</td><td class="tr vg">205,438</td><td class="tr v2">46,018</td></tr>
+          <tr><td>2023년</td><td>사업+근로 합산</td><td class="tr vg">64,091,006</td><td class="tr v2">50,872,449</td></tr>
+          <tr style="background:rgba(80,150,248,.05)"><td>2025년</td><td>근로(1~6월)</td><td class="tr vb">42,802,800</td><td class="tr v2">연환산 약 7,134만</td></tr>
+          <tr style="background:rgba(245,160,48,.06)"><td colspan="2" style="color:var(--amber)">2025.07.01~ 육아휴직 중</td><td colspan="2" class="tr vo">육아휴직급여 수령</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="pt">2025년 종합소득세 과세표준 구간</div>
+    <table>
+      <thead><tr><th>과표 구간</th><th style="text-align:right">세율</th><th style="text-align:right">누진공제</th><th>호정 해당</th><th>득희 해당</th></tr></thead>
+      <tbody>
+        <tr><td>1,400만 이하</td><td class="tr">6%</td><td class="tr">—</td><td></td><td></td></tr>
+        <tr><td>1,400만~5,000만</td><td class="tr">15%</td><td class="tr">126만</td><td></td><td></td></tr>
+        <tr style="background:rgba(80,150,248,.07)"><td>5,000만~8,800만</td><td class="tr vb">24%</td><td class="tr vb">576만</td><td style="color:var(--blue)">✓ 해당 (78,473,179)</td><td style="color:var(--blue)">✓ 해당 (57,915,992)</td></tr>
+        <tr><td>8,800만~1.5억</td><td class="tr">35%</td><td class="tr">1,544만</td><td></td><td></td></tr>
+        <tr><td>1.5억~3억</td><td class="tr">38%</td><td class="tr">1,994만</td><td></td><td></td></tr>
+        <tr><td>3억~5억</td><td class="tr">40%</td><td class="tr">2,594만</td><td></td><td></td></tr>
+        <tr><td>5억 초과</td><td class="tr">45%</td><td class="tr">6,594만</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="ai-comment" style="margin-top:12px">
+      <div class="ai-comment-label">AI 신용 분석</div>
+      호정(KCB 910)·득희(KCB 927) 모두 상위 40~44% 우수 신용 구간입니다. 현재 총 부채 9.4억에 월 이자 295만으로 DSR이 호정 기준 38% 수준 — 40% 규제 한도 근접. <strong style="color:var(--amber)">신규 대출은 사실상 불가 또는 제한 가능</strong>. 2026.09 카카오뱅크 만기 시 기존 부채 대환은 가능하나 증액은 어려울 수 있습니다. 육아휴직 종료 후 소득 인정 시점부터 신용 활용 범위 확대됩니다.
+    </div>
+  </div>
+</div>
+
+<!-- 마일스톤 -->
+<div id="s-milestone" class="sec">
+  <!-- 연도 탭 -->
+  <div class="mo-tabs" id="ms-year-tabs">
+    <button class="mo-tab on" onclick="setMsYear(2026,this)">2026 (43/41세)</button>
+    <button class="mo-tab" onclick="setMsYear(2027,this)">2027 (44/42세)</button>
+    <button class="mo-tab" onclick="setMsYear(2028,this)">2028 (45/43세)</button>
+    <button class="mo-tab" onclick="setMsYear(2029,this)">2029 (46/44세)</button>
+    <button class="mo-tab" onclick="setMsYear(2030,this)">2030 (47/45세)</button>
+    <button class="mo-tab" style="opacity:.5;cursor:default">2031~</button>
+  </div>
+
+  <!-- 요약 KPI -->
+  <div class="kgrid" id="ms-kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"></div>
+
+  <!-- AI 코멘트 -->
+  <div class="ai-comment" id="ms-ai-box" style="margin-bottom:14px">
+    <div class="ai-comment-label">AI 연간 분석</div>
+    <span id="ms-ai-text">연도를 선택하면 해당 연도 주요 이슈와 현금흐름 분석을 드립니다.</span>
+  </div>
+
+  <!-- 범례 -->
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;padding:8px 14px;background:var(--bg2);border-radius:var(--r2k);border:1px solid var(--border)">
+    <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block"></span>수입·임대</span>
+    <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block"></span>지출·부채</span>
+    <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--amber);display:inline-block"></span>투자·자산</span>
+    <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--blue);display:inline-block"></span>사업·서울린지</span>
+    <span style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--t3);display:inline-block"></span>예정·미정</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--t3)">셀 클릭 → 상세 입력</span>
+  </div>
+
+  <!-- 편집 패널 -->
+  <div id="ms-edit-panel" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2k);padding:16px 18px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="ms-ep-title" style="font-size:14px;font-weight:600;color:var(--t1)">셀 입력</span>
+      <button onclick="msCancelEdit()" style="background:transparent;border:none;color:var(--t2);cursor:pointer;font-size:18px;padding:2px 8px">✕</button>
+    </div>
+    <div class="tip tb2" id="ms-ep-tip" style="margin-bottom:12px"></div>
+    <div id="ms-ep-body"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+      <button onclick="msApplyEdit()" style="padding:7px 18px;border-radius:var(--r);background:var(--blue);border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:500">적용</button>
+      <button onclick="msCancelEdit()" style="padding:7px 14px;border-radius:var(--r);background:transparent;border:1px solid var(--border2);color:var(--t2);font-size:13px;cursor:pointer">취소</button>
+      <span id="ms-ep-saved" style="font-size:12px;color:var(--green);display:none">✓ 적용됨</span>
+    </div>
+  </div>
+
+  <!-- 타임라인 테이블 -->
+  <div class="panel" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table id="ms-tl-table" style="width:100%;border-collapse:collapse;min-width:960px">
+        <thead id="ms-tl-head"></thead>
+        <tbody id="ms-tl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button onclick="msSaveToSheet()" style="padding:8px 18px;border-radius:var(--r);background:var(--blue);border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:500">↗ 구글시트에 저장</button>
+  </div>
+
+  <!-- 평창리 회수 시뮬레이터 -->
+  <div id="ms-pyeong-slider" class="panel" style="margin-top:14px;border:1px solid rgba(29,233,182,.3);background:linear-gradient(140deg,rgba(29,233,182,.05),rgba(29,233,182,.01))">
+    <div class="pt" style="color:var(--green)">⭐ 평창리 토지 회수금 시뮬레이터 <span class="ptr">2026년 9월 예상</span></div>
+    <div class="concept-banner" style="margin-bottom:14px">평창리 회수 금액에 따라 자산 구조가 어떻게 바뀌는지 슬라이더로 확인해보세요.</div>
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--t2);white-space:nowrap">회수 예상액</span>
+      <input type="range" id="pyeong-slider" min="10000" max="55000" value="45000" step="1000"
+        style="flex:1;min-width:200px;accent-color:var(--green);cursor:pointer"
+        oninput="updatePyeong()">
+      <span style="font-size:18px;font-weight:600;font-family:var(--mono);color:var(--green);min-width:90px" id="pyeong-val">4억 5,000만</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="pyeong-kpi"></div>
+
+    <div style="background:var(--bg3);border-radius:var(--r2k);padding:14px 16px">
+      <div class="pt" style="margin-bottom:10px">회수금 자금 배분 계획</div>
+      <div id="pyeong-plan"></div>
+    </div>
+
+    <div class="ai-comment" style="margin-top:12px">
+      <div class="ai-comment-label">AI 분석</div>
+      <span id="pyeong-ai">슬라이더를 움직이면 시나리오별 분석이 표시됩니다.</span>
+    </div>
+  </div>
+</div>
+
+<!-- 카카오 알림 -->
+<div id="s-kakao" class="sec">
+  <div class="concept-banner">카카오톡 자동 알림 — Google Apps Script 연동 · V15 토큰 방식 · 5개 트리거 작동 중</div>
+  <div class="kgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+    <div class="kc"><div class="klb">등록된 트리거</div><div class="kval vg">5개</div><div class="ksub">정상 작동 중</div></div>
+    <div class="kc"><div class="klb">월 예상 알림 수</div><div class="kval vb">~65건</div><div class="ksub">일일+주간+월별</div></div>
+    <div class="kc"><div class="klb">자동이체 항목</div><div class="kval vo">9건</div><div class="ksub">월 470만원</div></div>
+    <div class="kc"><div class="klb">대출 만기 모니터링</div><div class="kval vr">7건</div><div class="ksub">D-30/14/7/3/1</div></div>
+  </div>
+  <div class="panel" style="margin-bottom:14px">
+    <div class="pt">알림 스케줄 타임라인</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px">
+      <div style="background:var(--bg3);border-radius:var(--r2k);padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:600">매일 실행</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="font-size:12px;font-weight:500;font-family:var(--mono);color:var(--amber);width:40px">08:00</span>
+          <div style="flex:1;height:4px;background:var(--a2);border-radius:2px"></div>
+          <span style="font-size:11px;color:var(--amber)">자동이체+만기</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:500;font-family:var(--mono);color:var(--blue);width:40px">09:00</span>
+          <div style="flex:1;height:4px;background:var(--b2);border-radius:2px"></div>
+          <span style="font-size:11px;color:var(--blue)">일일 자금현황</span>
+        </div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--r2k);padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:600">매주 월요일</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:500;font-family:var(--mono);color:var(--green);width:40px">08:00</span>
+          <div style="flex:1;height:4px;background:var(--g2);border-radius:2px"></div>
+          <span style="font-size:11px;color:var(--green)">주간 자금보고</span>
+        </div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--r2k);padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:600">매월 고정일</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="font-size:12px;font-weight:500;font-family:var(--mono);color:var(--green);width:40px">1일</span>
+          <div style="flex:1;height:4px;background:var(--g2);border-radius:2px"></div>
+          <span style="font-size:11px;color:var(--green)">월별 결산</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:500;font-family:var(--mono);color:var(--red);width:40px">10일</span>
+          <div style="flex:1;height:4px;background:var(--r2);border-radius:2px"></div>
+          <span style="font-size:11px;color:var(--red)">비래동 월세</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start">
+      <div class="panel" onclick="showKkPreview('transfer',this)" style="cursor:pointer;padding:12px 14px;border:1px solid var(--amber);background:var(--a3)">
+        <div style="font-size:13px;font-weight:500;color:var(--amber);margin-bottom:3px">자동이체 D-1</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매일 08:00</div>
+        <div style="font-size:11px;color:var(--t3)">내일 출금 예정 항목 + 합계금액</div>
+      </div>
+      <div class="panel" onclick="showKkPreview('daily',this)" style="cursor:pointer;padding:12px 14px">
+        <div style="font-size:13px;font-weight:500;color:var(--blue);margin-bottom:3px">일일 자금현황</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매일 09:00</div>
+        <div style="font-size:11px;color:var(--t3)">계좌·세이프·투자자산 현황</div>
+      </div>
+      <div class="panel" onclick="showKkPreview('weekly',this)" style="cursor:pointer;padding:12px 14px">
+        <div style="font-size:13px;font-weight:500;color:var(--green);margin-bottom:3px">주간 자금보고</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매주 월요일 08:00</div>
+        <div style="font-size:11px;color:var(--t3)">수입/지출/순현금 + 남은 자동이체</div>
+      </div>
+      <div class="panel" onclick="showKkPreview('monthly',this)" style="cursor:pointer;padding:12px 14px">
+        <div style="font-size:13px;font-weight:500;color:var(--green);margin-bottom:3px">월별 결산</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매월 1일 09:00</div>
+        <div style="font-size:11px;color:var(--t3)">전월 결산 + 실질 총자산</div>
+      </div>
+      <div class="panel" onclick="showKkPreview('loan',this)" style="cursor:pointer;padding:12px 14px">
+        <div style="font-size:13px;font-weight:500;color:var(--red);margin-bottom:3px">대출 만기 D-알림</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매일 08:00 체크</div>
+        <div style="font-size:11px;color:var(--t3)">D-30/14/7/3/1 단계별</div>
+      </div>
+      <div class="panel" onclick="showKkPreview('rent',this)" style="cursor:pointer;padding:12px 14px">
+        <div style="font-size:13px;font-weight:500;color:var(--blue);margin-bottom:3px">비래동 월세 확인</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">매월 10일 09:00</div>
+        <div style="font-size:11px;color:var(--t3)">4가구 미입금 호실 알림</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--t3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">카카오톡 메시지 미리보기</div>
+      <div style="background:var(--bg2);border-radius:var(--r2k);padding:14px;border:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px" id="kk-preview-label">← 왼쪽 카드를 클릭하세요</div>
+        <div style="background:var(--bg3);border-radius:12px;border-bottom-left-radius:3px;padding:12px 14px;font-size:12px;line-height:1.85;color:var(--t1);font-family:var(--mono);white-space:pre-wrap;min-height:200px" id="kk-preview-msg">카드를 클릭하면&#10;실제 발송되는&#10;카카오톡 메시지를&#10;미리 볼 수 있어요.</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:14px">
+    <div class="pt">자동이체 월별 일정 <span class="ptr">월 합계 4,701,511원</span></div>
+    <table style="width:100%;border-collapse:collapse" id="kk-transfer-tbody-wrap">
+      <thead><tr>
+        <th style="font-size:11px;font-weight:500;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--border2);text-align:left;width:55px">납부일</th>
+        <th style="font-size:11px;font-weight:500;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--border2);text-align:left">항목</th>
+        <th style="font-size:11px;font-weight:500;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--border2);text-align:left;width:50px">명의</th>
+        <th style="font-size:11px;font-weight:500;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--border2);text-align:right;width:110px">금액</th>
+      </tr></thead>
+      <tbody id="kk-transfer-tbody"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="pt">트리거 상태 <span class="ptr">5개 모두 활성</span></div>
+    <div id="kk-trigger-list"></div>
+  </div>
+</div>
+
+<!-- ⚙ 설정 -->
+<div id="s-settings" class="sec">
+  <div class="concept-banner">구글 시트 연동 설정 — 한번만 입력하면 브라우저에 저장됩니다.</div>
+  <div class="panel">
+    <div class="pt">연결 정보</div>
+    <div style="display:grid;gap:10px">
+      <div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:5px">구글 시트 ID</div>
+        <input id="cfg-sheet-id" style="width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;font-family:var(--mono);outline:none" placeholder="19Ms1JVf...">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:5px">API 키 (읽기 전용)</div>
+        <input id="cfg-api-key" type="password" style="width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;font-family:var(--mono);outline:none" placeholder="AIzaSy...">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:5px">웹앱 URL (쓰기 — 호실 편집용)</div>
+        <input id="cfg-webapp" style="width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;font-family:var(--mono);outline:none" placeholder="https://script.google.com/macros/s/...">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="saveConfig()" style="padding:9px 20px;border-radius:var(--r);background:var(--blue);border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:600">저장 + 새로고침</button>
+      <button onclick="testConn()" style="padding:9px 20px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--border2);color:var(--t2);font-size:13px;cursor:pointer">연결 테스트</button>
+    </div>
+    <div id="cfg-result" style="margin-top:10px;font-size:13px;color:var(--t3)"></div>
+  </div>
+  <div class="panel">
+    <div class="pt">연동 상태</div>
+    <div id="conn-status-detail" style="font-size:13px;color:var(--t2);line-height:2">상태 확인 중...</div>
+  </div>
+  <div class="panel">
+    <div class="pt">데이터 소스 안내</div>
+    <div class="tip tb2">구글 시트가 연결되면 시트 데이터를 우선 사용합니다. 연결 실패 시 내장 데이터(v6 하드코딩)로 폴백합니다.</div>
+    <div class="tip tg2">매월 업데이트 방법: 구글 시트의 각 탭에 새 행을 추가하면 새로고침 시 자동 반영됩니다.</div>
+    <table style="margin-top:10px">
+      <thead><tr><th>시트 탭</th><th>용도</th><th>업데이트 주기</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">NW_월별</td><td>현금성 순자산 (계좌잔액)</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">INV_월별</td><td>투자자산 (자기자본·취등록·수리비·대여금)</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">HIVE_결산</td><td>잠실하이브 OTA·고정비·순이익</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">SL_정산</td><td>서울린지 Toss 정산·대여금</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">HH_수입</td><td>가계 수입</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">HH_고정비</td><td>가계 고정비</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">HH_변동비</td><td>가계 변동비</td><td style="color:var(--t3)">월 1회</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--blue)">BIRAE_호실</td><td>비래동 호실 정보</td><td style="color:var(--t3)">변동 시</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  </div><!-- content -->
+</div><!-- main -->
+</div><!-- app -->
+
+<script>
+// ══ 구글 시트 연동 설정 ══
+const SHEET_CFG = {
+  id: localStorage.getItem('gs_sheetId') || '19Ms1JVfTf-ZTICAxYNoR7StEttMSYWxVttY69cs7zqQ',
+  key: localStorage.getItem('gs_apiKey') || 'AIzaSyCyHW1UG22wdSgtDh5ZR-XfU2qVr38P4WQ',
+  webApp: localStorage.getItem('gs_webApp') || 'https://script.google.com/macros/s/AKfycbzbHjNCYQDwCh9TF0g5vm2lTPezcTTX1fuzQAB_3UepdJjRsl04LLXMcJnobx7wdN8rbg/exec',
+};
+let SHEET_OK = false; // 시트 연결 성공 여부
+
+// ── 시트 읽기 ──────────────────────────────────────────
+async function readSheet(tabName, maxRow=500) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_CFG.id}`
+    + `/values/${encodeURIComponent(tabName+'!A1:Z'+maxRow)}?key=${SHEET_CFG.key}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.values || [];
+}
+
+// ── 헤더 기반 파싱 ─────────────────────────────────────
+function parseSheet(rows) {
+  if (!rows || rows.length < 2) return [];
+  const hdr = rows[0];
+  return rows.slice(1).filter(r => r.some(v => v !== '' && v !== undefined))
+    .map(r => {
+      const obj = {};
+      hdr.forEach((h, i) => { obj[h] = r[i] ?? ''; });
+      return obj;
+    });
+}
+
+function num(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+// ── 시트 → 내부 데이터 변환 ────────────────────────────
+function sheetToNW(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = {
+      acct: num(r['일반계좌']),
+      safe_hive: num(r['세이프_하이브']),
+      safe_hj: num(r['세이프_호정']),
+      deposit: num(r['신협보증금']),
+    };
+  });
+  return out;
+}
+
+function sheetToInv(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = {
+      hive_equity: num(r['자기자본_10pct']),
+      hive_acq: num(r['취득등록비']),
+      hive_repair: num(r['수리공사비']),
+      sl_loan: num(r['서울린지대여금']),
+    };
+  });
+  return out;
+}
+
+function sheetToHive(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = {
+      total: num(r['총매출']), profit: num(r['순이익']), hj60: num(r['호정60pct']),
+      ota: { 야놀자:num(r['야놀자']), 여기어때:num(r['여기어때']), 부킹:num(r['부킹']),
+             아고다:num(r['아고다']), 에어비앤비:num(r['에어비앤비']), 기타:num(r['기타OTA']) },
+      fixed: { 임차료:num(r['임차료']), 외주용역:num(r['외주용역']),
+               소모품:num(r['소모품']), 기타:num(r['기타고정비']) },
+    };
+  });
+  return out;
+}
+
+function sheetToSL(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = { toss:num(r['Toss정산']), loan_new:num(r['신규대여금']), loan_cum:num(r['누적대여금']), note:r['비고']||'' };
+  });
+  return out;
+}
+
+function sheetToHHInc(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = { hive60:num(r['하이브60pct']), biraedong:num(r['비래동임대']),
+      child_benefit:num(r['육아급여']), child_allow:num(r['아동수당']), other:num(r['기타수입']), 육아휴직:0 };
+  });
+  return out;
+}
+
+function sheetToHHFixed(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = { 대출이자:num(r['대출이자']), 보험료:num(r['보험료']), 관리비:num(r['관리비']) };
+  });
+  return out;
+}
+
+function sheetToHHVar(rows) {
+  const parsed = parseSheet(rows);
+  const out = {};
+  parsed.forEach(r => {
+    out[r['월']] = {
+      온라인쇼핑:num(r['온라인쇼핑']), 배달앱:num(r['배달앱']), 식비:num(r['식비']),
+      카페:num(r['카페']), 의료:num(r['의료']), 교통:num(r['교통']),
+      전기차충전:num(r['전기차충전']), 육아:num(r['육아']), 통신:num(r['통신']),
+      식재료:num(r['식재료']), 마트:num(r['마트']), 주유:num(r['주유']),
+      편의점:num(r['편의점']), 에어비앤비:num(r['에어비앤비']), 기타:num(r['기타']),
+    };
+  });
+  return out;
+}
+
+function sheetToRooms(rows) {
+  const parsed = parseSheet(rows);
+  return parsed.map(r => ({
+    ho: num(r['호실']), type: r['유형'], area: num(r['면적_평']),
+    deposit: num(r['보증금']), rent: num(r['월세']),
+    status: r['상태']==='임차'?'leased': r['상태']==='예정'?'coming':'vacant',
+    tenant: r['임차인']||'', phone: r['연락처']||'', period: r['계약기간']||'',
+    agency: r['계약부동산']||'', note: r['비고']||'',
+  }));
+}
+
+// ── 웹앱 쓰기 (호실 편집용) ────────────────────────────
+async function writeSheet(sheetName, rowNum, values) {
+  const url = SHEET_CFG.webApp + '?' + new URLSearchParams({
+    action: 'updateRow', sheet: sheetName, row: rowNum, values: JSON.stringify(values)
+  });
+  const res = await fetch(url, {method:'GET'});
+  return res.json();
+}
+
+// ── 전체 동기화 ─────────────────────────────────────────
+async function syncAll(silent=false) {
+  const btn = document.getElementById('sync-btn');
+  const st = document.getElementById('sync-status');
+  if(btn) { btn.disabled=true; btn.textContent='동기화 중...'; }
+  if(st) st.textContent = '🔄 구글 시트 로딩 중...';
+
+  const results = [];
+  try {
+    const [nwRows,invRows,hiveRows,slRows,incRows,fixRows,varRows,roomRows] = await Promise.allSettled([
+      readSheet('NW_월별'), readSheet('INV_월별'), readSheet('HIVE_결산'),
+      readSheet('SL_정산'), readSheet('HH_수입'), readSheet('HH_고정비'),
+      readSheet('HH_변동비'), readSheet('BIRAE_호실'),
+    ]);
+
+    let synced = 0;
+    if(nwRows.status==='fulfilled' && nwRows.value.length>1) { NW_DATA=sheetToNW(nwRows.value); synced++; results.push('✅ NW_월별'); }
+    else results.push('❌ NW_월별');
+
+    if(invRows.status==='fulfilled' && invRows.value.length>1) { INV_DATA=sheetToInv(invRows.value); synced++; results.push('✅ INV_월별'); }
+    else results.push('❌ INV_월별');
+
+    if(hiveRows.status==='fulfilled' && hiveRows.value.length>1) { HIVE_DATA=sheetToHive(hiveRows.value); synced++; results.push('✅ HIVE_결산'); }
+    else results.push('❌ HIVE_결산');
+
+    if(slRows.status==='fulfilled' && slRows.value.length>1) { SL_DATA=sheetToSL(slRows.value); synced++; results.push('✅ SL_정산'); }
+    else results.push('❌ SL_정산');
+
+    if(incRows.status==='fulfilled' && incRows.value.length>1) { HH_INC=sheetToHHInc(incRows.value); synced++; results.push('✅ HH_수입'); }
+    else results.push('❌ HH_수입');
+
+    if(fixRows.status==='fulfilled' && fixRows.value.length>1) { HH_FIXED=sheetToHHFixed(fixRows.value); synced++; results.push('✅ HH_고정비'); }
+    else results.push('❌ HH_고정비');
+
+    if(varRows.status==='fulfilled' && varRows.value.length>1) { HH_VAR=sheetToHHVar(varRows.value); synced++; results.push('✅ HH_변동비'); }
+    else results.push('❌ HH_변동비');
+
+    if(roomRows.status==='fulfilled' && roomRows.value.length>1) {
+      const loaded = sheetToRooms(roomRows.value);
+      if(loaded.length>0) { ROOMS_DATA.splice(0,ROOMS_DATA.length,...loaded); synced++; results.push('✅ BIRAE_호실'); }
+    } else results.push('❌ BIRAE_호실');
+
+    SHEET_OK = synced > 0;
+    const now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    if(st) st.textContent = SHEET_OK ? `✅ ${synced}/8 연동 완료 · ${now}` : '⚠️ 시트 연결 실패 — 내장 데이터 사용 중';
+    const sbTime = document.getElementById('sb-sync-time');
+    if(sbTime) sbTime.textContent = SHEET_OK ? `${now} 동기화` : '내장 데이터 사용';
+
+    // 상세 상태 업데이트
+    const detail = document.getElementById('conn-status-detail');
+    if(detail) detail.innerHTML = results.map(r=>`<div>${r}</div>`).join('');
+
+  } catch(e) {
+    SHEET_OK = false;
+    if(st) st.textContent = '⚠️ 내장 데이터 사용 중';
+    console.warn('시트 동기화 실패:', e);
+  }
+
+  if(btn) { btn.disabled=false; btn.textContent='↻ 새로고침'; }
+
+  // 현재 페이지 재렌더
+  const cur = document.querySelector('.sec.on');
+  if(cur) {
+    const id = cur.id.replace('s-','');
+    if(id==='networth') { renderNW('all'); setTimeout(renderNWChart,100); }
+    if(id==='hive') { renderHive('all'); setTimeout(()=>{renderOTA();renderHiveFixed('all');},100); }
+    if(id==='sl') renderSL('all');
+    if(id==='bd') { renderRooms(); renderBdBars(); }
+    if(id==='household') { renderHH(curHhMo); setTimeout(renderHHIncChart,100); }
+  }
+}
+
+// ── 설정 저장 ───────────────────────────────────────────
+function saveConfig() {
+  SHEET_CFG.id = document.getElementById('cfg-sheet-id').value.trim();
+  SHEET_CFG.key = document.getElementById('cfg-api-key').value.trim();
+  SHEET_CFG.webApp = document.getElementById('cfg-webapp').value.trim();
+  localStorage.setItem('gs_sheetId', SHEET_CFG.id);
+  localStorage.setItem('gs_apiKey', SHEET_CFG.key);
+  localStorage.setItem('gs_webApp', SHEET_CFG.webApp);
+  document.getElementById('cfg-result').innerHTML = '<span style="color:var(--green)">✅ 저장 완료 — 동기화 시작...</span>';
+  syncAll();
+}
+
+async function testConn() {
+  document.getElementById('cfg-result').innerHTML = '<span style="color:var(--blue)">테스트 중...</span>';
+  try {
+    const rows = await readSheet('NW_월별');
+    document.getElementById('cfg-result').innerHTML = `<span style="color:var(--green)">✅ API 읽기 성공 — NW_월별 ${rows.length}행 확인</span>`;
+  } catch(e) {
+    document.getElementById('cfg-result').innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
+}
+
+// 설정 패널 열릴 때 값 채우기
+function fillConfigPanel() {
+  const si = document.getElementById('cfg-sheet-id');
+  const ak = document.getElementById('cfg-api-key');
+  const wa = document.getElementById('cfg-webapp');
+  if(si) si.value = SHEET_CFG.id;
+  if(ak) ak.value = SHEET_CFG.key;
+  if(wa) wa.value = SHEET_CFG.webApp;
+}
+
+// ══ 데이터 (폴백용 하드코딩 — 시트 연동 실패 시 사용) ══
+// 현금성 순자산: 신협 보증금 = 수취 총액 1,900만 (투에이치로 이동된 공사비 포함한 원래 수취액)
+const NW_DATA={
+  '2026-01':{acct:7145645,safe_hive:37025277,safe_hj:44220682,deposit:0},
+  '2026-02':{acct:8831386,safe_hive:49078107,safe_hj:30980506,deposit:0},
+  '2026-03':{acct:3118245,safe_hive:30113225,safe_hj:23913628,deposit:9750000}, // 3월 강귀남6.4+진선빌3.35 = 975만
+  '2026-04':{acct:3840571,safe_hive:24122626,safe_hj:22838497,deposit:19000000}, // 4/13 현재 임차 3가구 보증금 수취 합계
+};
+// 투자자산 3항목: 자기자본(낙찰가-대출 10%)+취등록세+수리비 + 서울린지대여금
+const INV_DATA={
+  '2026-01':{hive_equity:40530000,hive_acq:0,hive_repair:0,sl_loan:5000000},      // 1월: 경매보증금
+  '2026-02':{hive_equity:40530000,hive_acq:13831501,hive_repair:22000000,sl_loan:9500000},  // 2월: 취등록+수리시작
+  '2026-03':{hive_equity:40530000,hive_acq:13831501,hive_repair:32968715,sl_loan:16500000}, // 3월: 공사비 추가
+  '2026-04':{hive_equity:40530000,hive_acq:13831501,hive_repair:32468715,sl_loan:16500000}, // 4월: 동일
+};
+const NW_MO=Object.keys(NW_DATA);
+
+function nwCalc(m){
+  const d=NW_DATA[m];
+  const safe=d.safe_hive+d.safe_hj;
+  const cash=d.acct+safe+d.deposit;
+  const inv=INV_DATA[m];
+  const hive_total=inv.hive_equity+inv.hive_acq+inv.hive_repair;
+  const invest=hive_total+inv.sl_loan;
+  return{acct:d.acct,safe,safe_hive:d.safe_hive,safe_hj:d.safe_hj,deposit:d.deposit,cash,invest,
+    hive_equity:inv.hive_equity,hive_acq:inv.hive_acq,hive_repair:inv.hive_repair,hive_total,
+    sl_loan:inv.sl_loan,total:cash+invest};
+}
+
+const HIVE_DATA={
+  '2025-12':{total:52080158,profit:24035342,hj60:14421205,ota:{야놀자:15271491,여기어때:24753167,부킹:4369500,아고다:1012500,에어비앤비:1804000,기타:4773000},fixed:{임차료:5500000,외주용역:5610000,소모품:994030,기타:900000}},
+  '2026-01':{total:43916882,profit:20038862,hj60:12023317,ota:{야놀자:11720694,여기어때:23033588,부킹:1994400,아고다:921200,에어비앤비:1570000,기타:4580000},fixed:{임차료:5500000,외주용역:5100000,소모품:591650,기타:900000}},
+  '2026-02':{total:44067460,profit:20647664,hj60:12388598,ota:{야놀자:12905536,여기어때:13267474,부킹:5147650,아고다:3199600,에어비앤비:970000,기타:8293000},fixed:{임차료:5500000,외주용역:4500000,소모품:947230,기타:900000}},
+  '2026-03':{total:51311655,profit:24704293,hj60:14822576,ota:{야놀자:16895090,여기어때:12163200,부킹:9037925,아고다:6069940,에어비앤비:3889000,기타:2635000},fixed:{임차료:5500000,외주용역:5200000,소모품:216350,기타:900000}},
+};
+const HIVE_MO=Object.keys(HIVE_DATA);
+
+const SL_DATA={
+  '2026-01':{toss:3253600,loan_new:5000000,loan_cum:5000000,note:'초기 사업자금 투입, 농산물 위탁판매 개시'},
+  '2026-02':{toss:10904100,loan_new:4500000,loan_cum:9500000,note:'2월 매출 급증 — 채널 본격화'},
+  '2026-03':{toss:18240727,loan_new:7000000,loan_cum:16500000,note:'3월 최고 기록 — 사업성 확인'},
+  '2026-04':{toss:0,loan_new:0,loan_cum:16500000,note:'4월 집계 중'},
+};
+
+// 가계 수입 — 확정 내역 정리
+// 1월 other 700만: 합정동 에어비앤비 양수 시 수익금 → 양수인 정산 지급 (수입 아님, 지출성 자산 이동) → 0으로 수정
+// 2월 other 2,000만: 합정동 에어비앤비 임차보증금 반환 수령 (윤영희) → 수입 아님, 보증금 회수(자산 이동) → 0으로 수정
+// 두 항목 모두 수입이 아닌 계좌 간 자산 이동이므로 가계 수입 집계에서 제외
+const HH_INC={
+  '2026-01':{hive60:12023317,biraedong:0,child_benefit:4500000,child_allow:100000,other:0,육아휴직:0},
+  '2026-02':{hive60:12388598,biraedong:0,child_benefit:1600000,child_allow:100000,other:0,육아휴직:0},
+  '2026-03':{hive60:14822576,biraedong:2050000,child_benefit:0,child_allow:100000,other:0,육아휴직:0},
+  '2026-04':{hive60:14822576,biraedong:2650000,child_benefit:0,child_allow:100000,other:0,육아휴직:0},
+};
+const HH_FIXED={
+  '2026-01':{대출이자:1942290,보험료:306747,관리비:476230},
+  '2026-02':{대출이자:1469788,보험료:306747,관리비:1565250},
+  '2026-03':{대출이자:2955340,보험료:306747,관리비:565040},
+  '2026-04':{대출이자:2955340,보험료:306747,관리비:565040},
+};
+const HH_VAR={
+  '2026-01':{온라인쇼핑:2513940,배달앱:171620,식비:133000,카페:186800,의료:23300,교통:158800,전기차충전:165310,육아:73000,통신:15620,식재료:15000,마트:21480,주유:8000,에어비앤비:321489,기타:117090},
+  '2026-02':{온라인쇼핑:1350310,배달앱:157093,식비:398500,카페:90600,의료:15000,교통:103500,전기차충전:80301,육아:34000,통신:152860,식재료:10000,마트:60410,주유:9400,편의점:38550,기타:497610},
+  '2026-03':{온라인쇼핑:1450500,배달앱:133525,식비:97000,의료:17900,교통:4120,전기차충전:98217,통신:369540,편의점:4900,기타:183827},
+  '2026-04':{온라인쇼핑:322070,배달앱:32450,식비:48000,의료:31200,전기차충전:32301,식재료:51000,마트:22910,카페:5400,편의점:1900,기타:68100},
+};
+const HH_C={온라인쇼핑:'#5096f8',배달앱:'#f5a030',식비:'#f05070',카페:'#b090f8',의료:'#22d3ee',교통:'#4e6880',전기차충전:'#1de9b6',육아:'#22d3ee',통신:'#4e6880',식재료:'#1de9b6',마트:'#5096f8',주유:'#4e6880',편의점:'#8eaac8',에어비앤비:'#f05070',기타:'#4e6880'};
+
+const ROOMS_DATA=[
+  {ho:101,type:'원룸',deposit:6000000,rent:400000,area:10.2,status:'leased',tenant:'강귀남',phone:'',period:'2년',agency:'',note:''},
+  {ho:201,type:'2룸',deposit:7000000,rent:600000,area:13.5,status:'vacant',tenant:'',phone:'',period:'',agency:'',note:''},
+  {ho:202,type:'원룸',deposit:3000000,rent:350000,area:6.2,status:'leased',tenant:'진선빌',phone:'',period:'2년',agency:'',note:''},
+  {ho:203,type:'1.5룸',deposit:5000000,rent:450000,area:8.0,status:'vacant',tenant:'',phone:'',period:'',agency:'',note:''},
+  {ho:301,type:'2룸',deposit:7000000,rent:600000,area:13.5,status:'coming',tenant:'황문진',phone:'',period:'2년',agency:'',note:'4/20 입주'},
+  {ho:302,type:'원룸',deposit:5000000,rent:350000,area:6.2,status:'vacant',tenant:'',phone:'',period:'',agency:'',note:''},
+  {ho:303,type:'1.5룸',deposit:5000000,rent:450000,area:8.0,status:'vacant',tenant:'',phone:'',period:'',agency:'',note:''},
+  {ho:401,type:'5룸',deposit:10000000,rent:1300000,area:20.0,status:'leased',tenant:'LINA',phone:'',period:'1년',agency:'',note:'외국인 임차'},
+  {ho:402,type:'원룸',deposit:3000000,rent:300000,area:6.0,status:'vacant',tenant:'',phone:'',period:'',agency:'',note:''},
+];
+
+const DEBTS=[
+  {name:'토스뱅크 대환',owner:'득희',rate:7.38,bal:30200000,maturity:'2027.02',alert:'최고금리 우선상환'},
+  {name:'토스뱅크 신용',owner:'득희',rate:6.62,bal:14000000,maturity:'2027.01',alert:''},
+  {name:'경락잔금(비래동)',owner:'득희',rate:4.70,bal:495000000,maturity:'2027.02',alert:''},
+  {name:'토스뱅크 신용',owner:'호정',rate:5.57,bal:66000000,maturity:'2027.01',alert:''},
+  {name:'카카오뱅크 신용',owner:'호정',rate:5.505,bal:30000000,maturity:'2026.09',alert:'⚠ 만기임박'},
+  {name:'우리WON 직장인',owner:'호정',rate:4.51,bal:40200000,maturity:'2027.02',alert:'갱신완료'},
+  {name:'NH모바일 전세',owner:'득희',rate:5.06,bal:264000000,maturity:'2027.10',alert:''},
+];
+
+// ══ 유틸 ══
+const f=n=>Math.round(Math.abs(n||0)).toLocaleString('ko-KR');
+const fw=n=>{const a=Math.abs(n||0);return a>=100000000?(a/100000000).toFixed(1)+'억':a>=10000?Math.round(a/10000)+'만':Math.round(a).toLocaleString();};
+const delta=(c,p)=>{if(!p)return'';const d=c-p;const p2=Math.round(Math.abs(d/p)*100);const s=d>=0?'▲':'▼';const cl=d>=0?'d-up':'d-dn';return`<span class="hc-delta ${cl}">${s} ${fw(Math.abs(d))} (${p2}%)</span>`;};
+let charts={};
+function dc(id){if(charts[id]){try{charts[id].destroy()}catch(e){}delete charts[id];}}
+const TK={color:'#4e6880',font:{size:11}};
+const GR={color:'rgba(255,255,255,0.04)'};
+
+// AI 코멘트 데이터
+const NW_AI_COMMENTS={
+  all:'1~4월 흐름: 1월은 하이브 수령(1,202만)+육아급여(450만)로 안정적 시작. 2월은 부가세 환급(1,342만)으로 세이프박스 최고치 달성. 3월은 비래동 공사비 집중 투자로 현금 감소 — 투자자산은 증가. 4월은 황문진 입주(4/20) 후 보증금 수취 시 반등 예상.',
+  '2026-01':'1월: 하이브 60% 수령(1,202만) + 육아급여(450만) + 아동수당(10만)이 주 수입. ⚠️ 종전 기타수입 700만은 합정동 에어비앤비 양도 시 수익금을 양수인에게 정산 지급한 금액 — 수입이 아닌 자산 이동이므로 집계 제외.',
+  '2026-02':'2월: 잠실하이브 부가세 환급(1,342만) 반영으로 세이프박스 최고치. ⚠️ 종전 기타수입 2,000만(윤영희보증금)은 합정동 에어비앤비 임차보증금 반환 수령 — 수입이 아닌 보증금 회수(자산 이동)이므로 수입 집계 제외.',
+  '2026-03':'3월: 비래동 공사비 1,100만 + 서울린지 700만 = 1,800만 투자 집행. 비래동 임대수입 205만 첫 발생. 신협 보증금 1,900만 수취(강귀남+진선빌, 투에이치 이동분 포함) — 현금성 순자산 포함.',
+  '2026-04':'4월(진행중): 비래동 임대 265만(4가구). 황문진 4/20 입주 후 보증금 700만 추가 수취 예정. 서울린지 4월 정산 집계 후 추가 반영.',
+};
+
+// ══ 네비게이션 ══
+const PAGES={
+  networth:{t:'현금성 순자산',s:'내가 실제로 부자가 되고 있는가?'},
+  totalasset:{t:'총 자산 현황',s:'금융+부동산+퇴직금 종합 순자산'},
+  hive:{t:'잠실하이브',s:'OTA 채널 매출 · 수익 배분 · 결산'},
+  sl:{t:'서울린지',s:'농산물 위탁판매 · 대여금 현황'},
+  bd:{t:'하이브비래 (비래동 투자)',s:'호실 현황 · 임대수익 · 매도 시나리오'},
+  household:{t:'가계 수입·지출',s:'수입/지출 월별 분석 · 절약 시나리오'},
+  debts:{t:'부채 현황',s:'호정·득희 대출 현황 및 상환 우선순위'},
+  credit:{t:'신용·소득 현황',s:'신용점수 · 연소득 · DSR 분석'},
+  milestone:{t:'마일스톤',s:'5년·10년·20년 재정 독립 로드맵'},
+  kakao:{t:'카카오 알림',s:'자동이체·만기·자금보고 카카오톡 알림 관리'},
+  settings:{t:'설정',s:'구글 시트 연동 · API 키 · 웹앱 URL'},
+};
+function nav(id,el){
+  document.querySelectorAll('.nav').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
+  if(el) el.classList.add('on');
+  const sec = document.getElementById('s-'+id); if(sec) sec.classList.add('on');
+  const p=PAGES[id]||{t:id,s:''};
+  document.getElementById('page-title').textContent=p.t;
+  document.getElementById('page-sub').textContent=p.s;
+  if(id==='networth')setTimeout(()=>{renderNW('all');renderNWChart();},60);
+  if(id==='totalasset')renderTA();
+  if(id==='hive')setTimeout(()=>{renderHive('all');renderOTA();renderHiveFixed('all');},60);
+  if(id==='sl')setTimeout(()=>renderSL('all'),60);
+  if(id==='bd'){renderRooms();renderBdBars();}
+  if(id==='household')setTimeout(()=>{setHHTab('income',document.querySelector('#hh-sub-tabs .on'));renderHH('all');setTimeout(renderHHIncChart,100);},60);
+  if(id==='debts')renderDebts();
+  if(id==='milestone'){initMsData(2026);renderMsTimeline();}
+  if(id==='kakao')renderKakao();
+  if(id==='settings')fillConfigPanel();
+}
+
+// ══ ① 현금성 순자산 ══
+let curNWMo='all';
+function setNWMo(m,el){
+  curNWMo=m;
+  document.querySelectorAll('#nw-tabs .mo-tab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderNW(m);
+  document.getElementById('nw-chart-panel').style.display=m==='all'?'block':'none';
+}
+function renderNW(m){
+  const area=document.getElementById('nw-hero-area');
+  const detail=document.getElementById('nw-detail-area');
+  document.getElementById('nw-ai-comment').innerHTML=`<div class="ai-comment-label">AI 분석</div>${NW_AI_COMMENTS[m]||NW_AI_COMMENTS.all}`;
+  if(m==='all'){
+    const cur=nwCalc('2026-04');const prev=nwCalc('2026-03');
+    area.innerHTML=`<div class="hero-grid">
+      <div class="hero-card hc-green" onclick="openModal('nw_cash')">
+        <div class="hc-label" style="color:var(--green)">💵 현금성 순자산</div>
+        <div class="hc-val" style="color:var(--green)">${fw(cur.cash)}</div>
+        <div class="hc-sub">계좌 ${fw(cur.acct)} + 세이프 ${fw(cur.safe)}<br>+신협보증금 ${fw(cur.deposit)}</div>
+        ${delta(cur.cash,prev.cash)}
+      </div>
+      <div class="hero-card hc-amber" onclick="openModal('nw_invest')">
+        <div class="hc-label" style="color:var(--amber)">🏗 투자자산</div>
+        <div class="hc-val" style="color:var(--amber)">${fw(cur.invest)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;margin-bottom:4px">
+          <div style="background:rgba(245,160,48,.12);border-radius:6px;padding:6px 8px;font-size:10px">
+            <div style="color:var(--t3);margin-bottom:2px">자기자본(10%)</div>
+            <div style="font-family:var(--mono);color:var(--amber);font-weight:600">${fw(cur.hive_equity)}</div>
+          </div>
+          <div style="background:rgba(245,160,48,.12);border-radius:6px;padding:6px 8px;font-size:10px">
+            <div style="color:var(--t3);margin-bottom:2px">취득·등록비</div>
+            <div style="font-family:var(--mono);color:var(--amber);font-weight:600">${fw(cur.hive_acq)}</div>
+          </div>
+          <div style="background:rgba(245,160,48,.12);border-radius:6px;padding:6px 8px;font-size:10px">
+            <div style="color:var(--t3);margin-bottom:2px">수리·공사비</div>
+            <div style="font-family:var(--mono);color:var(--amber);font-weight:600">${fw(cur.hive_repair)}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:6px">+ 서울린지 대여금 ${fw(cur.sl_loan)}</div>
+        <span class="hc-delta d-eq">매도차익 ~3.1억 + 대여금 회수</span>
+      </div>
+      <div class="hero-card hc-blue" onclick="openModal('nw_total')">
+        <div class="hc-label" style="color:var(--blue)">★ 실질 총자산</div>
+        <div class="hc-val" style="color:var(--blue)">${fw(cur.total)}</div>
+        <div class="hc-sub">현금성 ${fw(cur.cash)} + 투자자산 ${fw(cur.invest)}</div>
+        ${delta(cur.total,prev.total)}
+      </div>
+    </div>`;
+    detail.innerHTML=`<div class="panel"><div class="pt">월별 자산 구성 전체 요약 <span class="ptr">원</span></div><div style="overflow-x:auto"><table>
+      <thead><tr><th>구분</th>${NW_MO.map(m=>`<th style="text-align:right${m==='2026-04'?';color:var(--blue)':''}">${m.replace('2026-','')+'월'}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr style="background:var(--g3)"><td style="font-weight:600;color:var(--green)">① 현금성 순자산</td>${NW_MO.map(m=>`<td class="tr vg" style="font-weight:600">${f(nwCalc(m).cash)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--t2)">└ 일반계좌</td>${NW_MO.map(m=>`<td class="tr v2">${f(NW_DATA[m].acct)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--t2)">└ 세이프박스(하이브)</td>${NW_MO.map(m=>`<td class="tr v2">${f(NW_DATA[m].safe_hive)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--t2)">└ 세이프박스(호정)</td>${NW_MO.map(m=>`<td class="tr v2">${f(NW_DATA[m].safe_hj)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--sky)">└ 신협 보증금 수취</td>${NW_MO.map(m=>`<td class="tr" style="color:var(--sky)">${NW_DATA[m].deposit?f(NW_DATA[m].deposit):'—'}</td>`).join('')}</tr>
+        <tr style="background:var(--a3)"><td style="font-weight:600;color:var(--amber)">② 투자자산</td>${NW_MO.map(m=>`<td class="tr vo" style="font-weight:600">${f(nwCalc(m).invest)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--t2)">└ 하이브비래 수리비</td>${NW_MO.map(m=>`<td class="tr vo">${f(INV_DATA[m].hive)}</td>`).join('')}</tr>
+        <tr><td style="padding-left:14px;font-size:12px;color:var(--purple)">└ 서울린지 대여금</td>${NW_MO.map(m=>`<td class="tr vp">${f(INV_DATA[m].sl_loan)}</td>`).join('')}</tr>
+        <tr class="tot"><td style="color:var(--blue)">★ 실질 총자산 (①+②)</td>${NW_MO.map(m=>`<td class="tr vb" style="font-weight:700">${f(nwCalc(m).total)}</td>`).join('')}</tr>
+        <tr><td style="font-size:12px;color:var(--t3)">전월 대비 (실질)</td>${NW_MO.map((m,i)=>{if(i===0)return`<td class="tr" style="color:var(--t3)">—</td>`;const c=nwCalc(m).total,p=nwCalc(NW_MO[i-1]).total,d=c-p;return`<td class="tr" style="color:${d>=0?'var(--green)':'var(--red)'};font-family:var(--mono)">${d>=0?'+':''}${f(d)}</td>`;}).join('')}</tr>
+      </tbody>
+    </table></div></div>`;
+  } else {
+    const c=nwCalc(m);const mi=NW_MO.indexOf(m);const prev=mi>0?nwCalc(NW_MO[mi-1]):null;const mn=m.replace('2026-','')+'월';
+    area.innerHTML=`<div class="hero-grid">
+      <div class="hero-card hc-green" onclick="openModal('nw_cash_mo')">
+        <div class="hc-label" style="color:var(--green)">💵 ${mn} 현금성 순자산</div>
+        <div class="hc-val" style="color:var(--green)">${fw(c.cash)}</div>
+        <div class="hc-sub">계좌 ${fw(c.acct)} + 세이프 ${fw(c.safe)}${c.deposit?`<br>신협보증금 ${fw(c.deposit)}`:''}</div>
+        ${prev?delta(c.cash,prev.cash):''}
+      </div>
+      <div class="hero-card hc-amber" onclick="openModal('nw_invest')">
+        <div class="hc-label" style="color:var(--amber)">🏗 ${mn} 투자자산</div>
+        <div class="hc-val" style="color:var(--amber)">${fw(c.invest)}</div>
+        <div class="hc-sub">하이브비래 ${fw(c.hive_inv)} / 서울린지 ${fw(c.sl_loan)}</div>
+        ${prev?delta(c.invest,prev.invest):''}
+      </div>
+      <div class="hero-card hc-blue" onclick="openModal('nw_total')">
+        <div class="hc-label" style="color:var(--blue)">★ ${mn} 실질 총자산</div>
+        <div class="hc-val" style="color:var(--blue)">${fw(c.total)}</div>
+        <div class="hc-sub">현금성 + 투자자산</div>
+        ${prev?delta(c.total,prev.total):''}
+      </div>
+    </div>`;
+    detail.innerHTML=`<div class="panel"><div class="pt">${mn} 현금성 순자산 구성</div>
+      <div class="pr-row"><div class="pr-lbl">일반계좌</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(c.acct/c.cash*100)}%;background:var(--blue)"></div></div><div class="pr-val vb">${f(c.acct)}원</div></div>
+      <div class="pr-row"><div class="pr-lbl">세이프박스(하이브)</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(NW_DATA[m].safe_hive/c.cash*100)}%;background:var(--amber)"></div></div><div class="pr-val vo">${f(NW_DATA[m].safe_hive)}원</div></div>
+      <div class="pr-row"><div class="pr-lbl">세이프박스(호정)</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(NW_DATA[m].safe_hj/c.cash*100)}%;background:#f5c060"></div></div><div class="pr-val vo">${f(NW_DATA[m].safe_hj)}원</div></div>
+      ${c.deposit?`<div class="pr-row"><div class="pr-lbl">신협 보증금 수취</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(c.deposit/c.cash*100)}%;background:var(--sky)"></div></div><div class="pr-val vsk">${f(c.deposit)}원</div></div>`:''}
+    </div>`;
+    MODALS['nw_cash_mo']={title:`${mn} 현금성 순자산 상세`,sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">일반계좌</div><div class="kval vb">${f(c.acct)}</div></div><div class="kc"><div class="klb">세이프(하이브)</div><div class="kval vo">${f(NW_DATA[m].safe_hive)}</div></div><div class="kc"><div class="klb">세이프(호정)</div><div class="kval vo">${f(NW_DATA[m].safe_hj)}</div></div><div class="kc"><div class="klb">신협 보증금</div><div class="kval vsk">${f(c.deposit)}</div></div><div class="kc" style="grid-column:span 2;background:rgba(29,233,182,.08)"><div class="klb">합계</div><div class="kval vg">${f(c.cash)}</div></div></div>`};
+  }
+}
+function renderNWChart(){
+  dc('nw');const ctx=document.getElementById('c-nw');if(!ctx)return;
+  const labels=['1월','2월','3월','4월'];
+  const cash=NW_MO.map(m=>Math.round(nwCalc(m).cash/10000));
+  const invest=NW_MO.map(m=>Math.round((INV_DATA[m].hive)/10000));
+  const total=NW_MO.map(m=>Math.round(nwCalc(m).total/10000));
+  charts['nw']=new Chart(ctx,{type:'bar',data:{labels,datasets:[
+    {label:'현금성 순자산',data:cash,backgroundColor:'rgba(29,233,182,.3)',borderRadius:4,stack:'s',order:2},
+    {label:'투자자산',data:invest,backgroundColor:'rgba(245,160,48,.35)',borderRadius:4,stack:'s',order:2},
+    {label:'실질 총자산',data:total,type:'line',borderColor:'#5096f8',backgroundColor:'transparent',tension:.35,pointRadius:6,pointBackgroundColor:'#5096f8',borderWidth:2.5,order:1},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>`${c.dataset.label}: ${c.raw.toLocaleString()}만원`}}},scales:{x:{stacked:true,ticks:TK,grid:{display:false}},y:{stacked:true,ticks:{...TK,callback:v=>v+'만'},grid:GR}}}});
+}
+
+// ══ 총 자산 ══
+function renderTA(){
+  const items=[
+    {lbl:'하이브비래(목표)',amt:850000000,c:'#f5a030'},{lbl:'평창리 토지',amt:450000000,c:'#5096f8'},{lbl:'잠실 임차보증금',amt:100000000,c:'#22d3ee'},
+    {lbl:'현금성 순자산',amt:67301694,c:'#1de9b6'},{lbl:'퇴직금(호정+득희)',amt:190000000,c:'#4e6880'},{lbl:'서울린지 대여금',amt:16500000,c:'#b090f8'},{lbl:'S&P ETF',amt:5000000,c:'#f05070'},
+  ];
+  const tot=items.reduce((s,i)=>s+i.amt,0);
+  document.getElementById('ta-bars').innerHTML=items.map(i=>`<div class="pr-row"><div class="pr-lbl">${i.lbl}</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(i.amt/tot*100)}%;background:${i.c}"></div></div><div class="pr-val" style="color:${i.c}">${fw(i.amt)} (${Math.round(i.amt/tot*100)}%)</div></div>`).join('');
+}
+
+// ══ 잠실하이브 ══
+let curHiveMo='all';
+function setHiveMo(m,el){
+  curHiveMo=m;
+  document.querySelectorAll('#hive-tabs .mo-tab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderHive(m);renderHiveFixed(m);
+}
+function renderHive(m){
+  const area=document.getElementById('hive-hero-area');
+  if(m==='all'){
+    const tot4=HIVE_MO.reduce((s,mo)=>s+HIVE_DATA[mo].total,0);
+    const pro4=HIVE_MO.reduce((s,mo)=>s+HIVE_DATA[mo].profit,0);
+    const hj4=HIVE_MO.reduce((s,mo)=>s+HIVE_DATA[mo].hj60,0);
+    area.innerHTML=`<div class="hero-grid">
+      <div class="hero-card hc-green" onclick="openModal('hive_total')" style="border-color:rgba(29,233,182,.4)">
+        <div class="hc-label" style="color:var(--green)">4개월 총매출</div>
+        <div class="hc-val" style="color:var(--green)">${fw(tot4)}</div>
+        <div class="hc-sub">12월~3월 / 이익률 평균 46.7%</div>
+        <span class="hc-delta d-up">▲ 월평균 4,784만</span>
+      </div>
+      <div class="hero-card hc-blue" onclick="openModal('hive_profit')" style="border-color:rgba(80,150,248,.4)">
+        <div class="hc-label" style="color:var(--blue)">4개월 순이익</div>
+        <div class="hc-val" style="color:var(--blue)">${fw(pro4)}</div>
+        <div class="hc-sub">더호텔 비용 차감 후</div>
+        <span class="hc-delta d-up">▲ 월평균 2,235만</span>
+      </div>
+      <div class="hero-card hc-amber" onclick="openModal('hive_hj60')" style="border-color:rgba(245,160,48,.4)">
+        <div class="hc-label" style="color:var(--amber)">호정 수령 (60%)</div>
+        <div class="hc-val" style="color:var(--amber)">${fw(hj4)}</div>
+        <div class="hc-sub">월평균 1,341만 실입금</div>
+        <span class="hc-delta d-up">▲ 핵심 수입원</span>
+      </div>
+    </div>`;
+  } else {
+    const d=HIVE_DATA[m];if(!d)return;
+    const mn=m.replace('2025-','').replace('2026-','')+'월';
+    const mi=HIVE_MO.indexOf(m);const prev=mi>0?HIVE_DATA[HIVE_MO[mi-1]]:null;
+    area.innerHTML=`<div class="hero-grid">
+      <div class="hero-card hc-green" onclick="openModal('hive_ota_${m}')">
+        <div class="hc-label" style="color:var(--green)">${mn} 총매출</div>
+        <div class="hc-val" style="color:var(--green)">${fw(d.total)}</div>
+        <div class="hc-sub">이익률 ${Math.round(d.profit/d.total*100)}% / OTA 6채널</div>
+        ${prev?delta(d.total,prev.total):''}
+      </div>
+      <div class="hero-card hc-blue" onclick="openModal('hive_cost_${m}')">
+        <div class="hc-label" style="color:var(--blue)">${mn} 고정비</div>
+        <div class="hc-val" style="color:var(--blue)">${fw(Object.values(d.fixed).reduce((s,v)=>s+v,0))}</div>
+        <div class="hc-sub">임차료·외주·소모품</div>
+        ${prev?delta(Object.values(d.fixed).reduce((s,v)=>s+v,0),Object.values(prev.fixed).reduce((s,v)=>s+v,0)):''}
+      </div>
+      <div class="hero-card hc-amber" onclick="openModal('hive_hj60_${m}')">
+        <div class="hc-label" style="color:var(--amber)">${mn} 호정 수령</div>
+        <div class="hc-val" style="color:var(--amber)">${fw(d.hj60)}</div>
+        <div class="hc-sub">순이익 ${fw(d.profit)} × 60%</div>
+        ${prev?delta(d.hj60,prev.hj60):''}
+      </div>
+    </div>`;
+    MODALS['hive_ota_'+m]={title:`${mn} OTA 채널별 매출`,sub:'',body:`<table><thead><tr><th>채널</th><th style="text-align:right">매출</th><th style="text-align:right">비율</th></tr></thead><tbody>${Object.entries(d.ota).map(([k,v])=>`<tr><td>${k}</td><td class="tr vg">${f(v)}</td><td class="tr v2">${Math.round(v/d.total*100)}%</td></tr>`).join('')}</tbody></table>`};
+    MODALS['hive_cost_'+m]={title:`${mn} 고정비 상세`,sub:'',body:`<table><thead><tr><th>항목</th><th style="text-align:right">금액</th></tr></thead><tbody>${Object.entries(d.fixed).map(([k,v])=>`<tr><td>${k}</td><td class="tr vr">${f(v)}</td></tr>`).join('')}</tbody></table>`};
+    MODALS['hive_hj60_'+m]={title:`${mn} 호정수령 계산`,sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">총매출</div><div class="kval vg">${f(d.total)}</div></div><div class="kc"><div class="klb">순이익</div><div class="kval vb">${f(d.profit)}</div></div><div class="kc"><div class="klb">호정 60%</div><div class="kval vo">${f(d.hj60)}</div></div><div class="kc"><div class="klb">더호텔 40%</div><div class="kval v2">${f(d.profit-d.hj60)}</div></div></div>`};
+  }
+}
+function renderOTA(){
+  dc('ota');const ctx=document.getElementById('c-ota');if(!ctx)return;
+  const labels=HIVE_MO.map(m=>m.replace('2025-','').replace('2026-','')+'월');
+  const keys=['야놀자','여기어때','부킹','아고다','에어비앤비','기타'];
+  const colors=['#f05070','#b090f8','#5096f8','#f5a030','#1de9b6','#4e6880'];
+  document.getElementById('hive-legend').innerHTML=keys.map((k,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--t3)"><span style="width:10px;height:10px;background:${colors[i]};border-radius:2px;display:inline-block"></span>${k}</span>`).join('');
+  charts['ota']=new Chart(ctx,{type:'bar',data:{labels,datasets:keys.map((k,i)=>({label:k,data:HIVE_MO.map(m=>HIVE_DATA[m].ota[k]||0),backgroundColor:colors[i],borderRadius:2,stack:'s'}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:TK,grid:{display:false}},y:{stacked:true,ticks:{...TK,callback:v=>fw(v)},grid:GR}}}});
+}
+function renderHiveFixed(m){
+  const allFixed={임차료:0,외주용역:0,소모품:0,기타:0};
+  const moFixed=m&&m!=='all'&&HIVE_DATA[m]?HIVE_DATA[m].fixed:null;
+  if(moFixed){
+    Object.keys(moFixed).forEach(k=>allFixed[k]=(allFixed[k]||0)+moFixed[k]);
+    document.getElementById('hive-fixed-title-r').textContent=m.replace('2025-','').replace('2026-','')+'월 / 누적';
+  } else {
+    HIVE_MO.forEach(mo=>Object.entries(HIVE_DATA[mo].fixed).forEach(([k,v])=>{allFixed[k]=(allFixed[k]||0)+v;}));
+    document.getElementById('hive-fixed-title-r').textContent='4개월 누적';
+  }
+  const tot=Object.values(allFixed).reduce((s,v)=>s+v,0);
+  const cum4={임차료:22000000,외주용역:20410000,소모품:2749260,기타:3600000};
+  const colors=['#f05070','#b090f8','#5096f8','#4e6880'];
+  const keys=Object.keys(allFixed);
+  document.getElementById('hive-fixed-bars').innerHTML=keys.map((k,i)=>{
+    const v=allFixed[k];const p=Math.round(v/tot*100);
+    const moVal=moFixed?moFixed[k]||0:null;
+    return`<div class="pr-row"><div class="pr-lbl">${k}</div><div class="pr-wrap"><div class="pr-fill" style="width:${p}%;background:${colors[i]}"></div></div><div class="pr-val" style="color:${colors[i]}">${fw(v)}${moVal?`<span style="font-size:10px;color:var(--t3)"> / 월${fw(moVal)}</span>`:''}  (${p}%)</div></div>`;
+  }).join('');
+}
+
+// ══ 서울린지 ══
+let curSlMo='all';
+function setSlMo(m,el){
+  curSlMo=m;document.querySelectorAll('#sl-tabs .mo-tab').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderSL(m);
+}
+function renderSL(m){
+  const area=document.getElementById('sl-hero-area');const detail=document.getElementById('sl-detail-area');
+  if(m==='all'){
+    const tot=Object.values(SL_DATA).reduce((s,d)=>s+d.toss,0);
+    area.innerHTML=`<div class="hero-grid">
+      <div class="hero-card hc-purple" onclick="openModal('sl_toss')">
+        <div class="hc-label" style="color:var(--purple)">Toss 정산 누계</div>
+        <div class="hc-val" style="color:var(--purple)">${fw(tot)}</div>
+        <div class="hc-sub">1~3월 합계 / 농산물 위탁판매</div>
+        <span class="hc-delta d-up">▲ 3월 최고 1,824만</span>
+      </div>
+      <div class="hero-card hc-amber" onclick="openModal('sl_loan')">
+        <div class="hc-label" style="color:var(--amber)">대여금 누적</div>
+        <div class="hc-val" style="color:var(--amber)">1,650만</div>
+        <div class="hc-sub">호정→서울린지 / 농산물 운영자금<br>당분간 운영자금으로 활용 예정</div>
+        <span class="hc-delta d-eq">이자·원금 회수 예정</span>
+      </div>
+      <div class="hero-card hc-green" onclick="openModal('sl_growth')">
+        <div class="hc-label" style="color:var(--green)">매출 성장률</div>
+        <div class="hc-val" style="color:var(--green)">+460%</div>
+        <div class="hc-sub">1월 325만 → 3월 1,824만</div>
+        <span class="hc-delta d-up">▲ 사업성 확인됨</span>
+      </div>
+    </div>`;
+    detail.innerHTML=`<div class="panel"><div class="pt">월별 정산 현황</div><table>
+      <thead><tr><th>월</th><th style="text-align:right">Toss 정산</th><th style="text-align:right">신규 대여금</th><th style="text-align:right">누적 대여금</th><th>비고</th></tr></thead>
+      <tbody>${['2026-01','2026-02','2026-03','2026-04'].map(mo=>{const d=SL_DATA[mo];return`<tr><td>${mo.replace('2026-','')+'월'}</td><td class="tr vp">${d.toss?f(d.toss):'집계 중'}</td><td class="tr vo">${d.loan_new?f(d.loan_new):'—'}</td><td class="tr vo" style="font-weight:600">${f(d.loan_cum)}</td><td style="font-size:12px;color:var(--t3)">${d.note}</td></tr>`;}).join('')}
+      <tr class="tot"><td>합계</td><td class="tr vp">${f(tot)}</td><td class="tr vo">16,500,000</td><td></td><td></td></tr></tbody>
+    </table></div>
+    <div class="panel"><div class="pt">사업 구조 및 대여금 개념</div>
+    <div class="flow-row">
+      <div class="fn fn-g">호정 세이프박스<br><span style="font-size:11px">출금</span></div><div class="farr">→</div>
+      <div class="fn fn-n">국민544 중계<br><span style="font-size:11px">중간계좌</span></div><div class="farr">→</div>
+      <div class="fn fn-p">서울린지 법인<br><span style="font-size:11px">농산물 운영자금</span></div><div class="farr">→</div>
+      <div class="fn fn-b">Toss·쿠팡 정산<br><span style="font-size:11px">2주 후 수령</span></div>
+    </div>
+    <div class="tip tp2">서울린지는 Toss·쿠팡·올웨이즈 채널에서 <strong>농산물 위탁판매</strong> 사업을 운영 중입니다. 대여금 1,650만은 법인 운영자금으로 활용되며, 당분간 이 구조를 유지합니다. 매출 성장(1→3월 +460%)에 따라 대여금 상환 충분히 가능합니다.</div>
+    </div>`;
+  }
+}
+
+// ══ 하이브비래 ══
+function renderRooms(){
+  document.getElementById('room-grid').innerHTML=ROOMS_DATA.map((r,i)=>{
+    const c=r.status==='leased'?'#1de9b6':r.status==='coming'?'#5096f8':'#2c4060';
+    return`<div class="room-card ${r.status}" onclick="openRoomEdit(${i})">
+      <div class="room-dot" style="background:${c}"></div>
+      <div style="font-size:17px;font-weight:600;margin-bottom:3px">${r.ho}호</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:5px">${r.type}·${r.area}평</div>
+      <div style="font-size:13px;font-family:var(--mono);color:${c}">보 ${(r.deposit/10000).toFixed(0)}만</div>
+      <div style="font-size:13px;font-family:var(--mono);color:${c}">월 ${(r.rent/10000).toFixed(0)}만</div>
+      ${r.tenant?`<div style="font-size:12px;color:var(--t2);margin-top:4px">${r.tenant}</div>`:''}
+      ${r.status==='coming'?`<div style="font-size:11px;color:var(--blue);margin-top:2px">4/20 입주</div>`:''}
+    </div>`;
+  }).join('');
+}
+function openRoomEdit(idx){
+  const r=ROOMS_DATA[idx];
+  MODALS['room_edit']={title:`${r.ho}호 정보 편집`,sub:`${r.type} · ${r.area}평`,body:`
+    <label class="edit-label">임차인</label><input class="edit-input" id="re-tenant" value="${r.tenant}" placeholder="임차인 이름">
+    <label class="edit-label">연락처</label><input class="edit-input" id="re-phone" value="${r.phone}" placeholder="010-0000-0000">
+    <label class="edit-label">보증금 (원)</label><input class="edit-input" id="re-deposit" value="${r.deposit}" type="number">
+    <label class="edit-label">월세 (원)</label><input class="edit-input" id="re-rent" value="${r.rent}" type="number">
+    <label class="edit-label">계약기간</label><input class="edit-input" id="re-period" value="${r.period}" placeholder="예) 2년">
+    <label class="edit-label">계약 부동산/중개인</label><input class="edit-input" id="re-agency" value="${r.agency}" placeholder="부동산 이름">
+    <label class="edit-label">상태</label>
+    <select class="edit-input" id="re-status">
+      <option value="leased" ${r.status==='leased'?'selected':''}>임차완료</option>
+      <option value="coming" ${r.status==='coming'?'selected':''}>입주예정</option>
+      <option value="vacant" ${r.status==='vacant'?'selected':''}>공실</option>
+    </select>
+    <label class="edit-label">비고</label><input class="edit-input" id="re-note" value="${r.note}" placeholder="메모">
+    <button onclick="saveRoom(${idx})" style="width:100%;padding:10px;border-radius:var(--r);background:var(--blue);border:none;color:#fff;font-size:14px;cursor:pointer;margin-top:6px">저장</button>`};
+  openModal('room_edit');
+}
+function saveRoom(idx){
+  ROOMS_DATA[idx].tenant=document.getElementById('re-tenant').value;
+  ROOMS_DATA[idx].phone=document.getElementById('re-phone').value;
+  ROOMS_DATA[idx].deposit=parseInt(document.getElementById('re-deposit').value)||ROOMS_DATA[idx].deposit;
+  ROOMS_DATA[idx].rent=parseInt(document.getElementById('re-rent').value)||ROOMS_DATA[idx].rent;
+  ROOMS_DATA[idx].period=document.getElementById('re-period').value;
+  ROOMS_DATA[idx].agency=document.getElementById('re-agency').value;
+  ROOMS_DATA[idx].status=document.getElementById('re-status').value;
+  ROOMS_DATA[idx].note=document.getElementById('re-note').value;
+  closeModal();renderRooms();
+}
+function renderBdBars(){
+  const items=[{lbl:'씽크·가구류',amt:5450000,c:'#f05070'},{lbl:'방수·주차장',amt:4675000,c:'#f5a030'},{lbl:'도배',amt:4106000,c:'#b090f8'},{lbl:'데코타일',amt:3845000,c:'#5096f8'},{lbl:'필로티·기타',amt:2715216,c:'#4e6880'}];
+  const tot=items.reduce((s,i)=>s+i.amt,0);
+  document.getElementById('bd-cost-total').textContent=`총 ${f(tot)}원`;
+  document.getElementById('bd-bars').innerHTML=items.map(i=>`<div class="pr-row"><div class="pr-lbl">${i.lbl}</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(i.amt/tot*100)}%;background:${i.c}"></div></div><div class="pr-val" style="color:${i.c}">${f(i.amt)}원 (${Math.round(i.amt/tot*100)}%)</div></div>`).join('');
+}
+
+// ══ 가계 수입·지출 ══
+let curHhMo='all',curHHTab='income';
+function setHHTab(tab,el){
+  curHHTab=tab;
+  document.querySelectorAll('#hh-sub-tabs .sub-tab').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  document.getElementById('hh-income-section').style.display=tab==='income'?'block':'none';
+  document.getElementById('hh-expense-section').style.display=tab==='expense'?'block':'none';
+  renderHH(curHhMo);
+  if(tab==='income')setTimeout(renderHHIncChart,100);
+  if(tab==='expense'){updateScenario();renderHHChange();}
+}
+function setHhMo(m,el){
+  curHhMo=m;document.querySelectorAll('#hh-tabs .mo-tab').forEach(b=>b.classList.remove('on'));el.classList.add('on');
+  renderHH(m);
+  if(curHHTab==='income')setTimeout(renderHHIncChart,100);
+}
+const HH_MONTHS=['2026-01','2026-02','2026-03','2026-04'];
+
+function getHHInc(m){
+  if(m==='all')return HH_MONTHS.reduce((acc,mo)=>{Object.entries(HH_INC[mo]).forEach(([k,v])=>{acc[k]=(acc[k]||0)+v;});return acc;},{});
+  return HH_INC[m]||{};
+}
+function getHHFixed(m){if(m==='all')return HH_MONTHS.reduce((acc,mo)=>{Object.entries(HH_FIXED[mo]).forEach(([k,v])=>{acc[k]=(acc[k]||0)+v;});return acc;},{});return HH_FIXED[m]||{};}
+function getHHVar(m){if(m==='all')return HH_MONTHS.reduce((acc,mo)=>{Object.entries(HH_VAR[mo]).forEach(([k,v])=>{acc[k]=(acc[k]||0)+v;});return acc;},{});return HH_VAR[m]||{};}
+
+function renderHH(m){
+  const mn=m==='all'?'전체 (1~4월)':m.replace('2026-','')+'월';
+  const incData=getHHInc(m);
+  const fixedData=getHHFixed(m);
+  const varData=getHHVar(m);
+  const incTot=Object.values(incData).reduce((s,v)=>s+v,0);
+  const fixedTot=Object.values(fixedData).reduce((s,v)=>s+v,0);
+  const varTot=Object.values(varData).reduce((s,v)=>s+v,0);
+  const expTot=fixedTot+varTot;
+  const netInc=incTot-expTot;
+
+  // 히어로 카드 (항상 표시)
+  document.getElementById('hh-hero-area').innerHTML=`<div class="hero-grid">
+    <div class="hero-card hc-green" onclick="openModal('hh_income_${m}')">
+      <div class="hc-label" style="color:var(--green)">💰 ${mn} 수입</div>
+      <div class="hc-val" style="color:var(--green)">${fw(incTot)}</div>
+      <div class="hc-sub">하이브60% + 임대 + 기타</div>
+      <span class="hc-delta d-up">▲ 하이브 핵심 수입원</span>
+    </div>
+    <div class="hero-card hc-red" onclick="openModal('hh_exp_${m}')">
+      <div class="hc-label" style="color:var(--red)">💸 ${mn} 지출</div>
+      <div class="hc-val" style="color:var(--red)">${fw(expTot)}</div>
+      <div class="hc-sub">고정 ${fw(fixedTot)} + 변동 ${fw(varTot)}</div>
+      <span class="hc-delta ${expTot<incTot?'d-up':'d-dn'}">비율: 수입의 ${Math.round(expTot/incTot*100)}%</span>
+    </div>
+    <div class="hero-card ${netInc>=0?'hc-blue':'hc-amber'}" onclick="openModal('hh_net_${m}')">
+      <div class="hc-label" style="color:${netInc>=0?'var(--blue)':'var(--amber)'}">= ${mn} 순수입</div>
+      <div class="hc-val" style="color:${netInc>=0?'var(--blue)':'var(--red)'}">${fw(Math.abs(netInc))}</div>
+      <div class="hc-sub">재투자 제외 가계 순이익</div>
+      <span class="hc-delta ${netInc>=0?'d-up':'d-dn'}">${netInc>=0?'▲ 흑자':'▼ 적자(재투자 포함시)'}</span>
+    </div>
+  </div>`;
+
+  // 수입 상세
+  const incItems=[
+    {k:'hive60',label:'잠실하이브(60%)',color:'#1de9b6'},{k:'biraedong',label:'비래동 임대',color:'#22d3ee'},
+    {k:'child_benefit',label:'육아급여',color:'#5096f8'},{k:'child_allow',label:'아동수당',color:'#b090f8'},
+    {k:'other',label:'기타수입',color:'#f5a030'},{k:'육아휴직',label:'육아휴직급여',color:'#f05070'},
+  ];
+  document.getElementById('hh-inc-detail').innerHTML=incItems.filter(i=>incData[i.k]>0).map(i=>{
+    const v=incData[i.k];const p=Math.round(v/incTot*100);
+    return`<div class="pr-row"><div class="pr-lbl">${i.label}</div><div class="pr-wrap"><div class="pr-fill" style="width:${p}%;background:${i.color}"></div></div><div class="pr-val" style="color:${i.color}">${f(v)}원 (${p}%)</div></div>`;
+  }).join('')+`<div style="border-top:1px solid var(--border);padding-top:9px;margin-top:5px;font-size:13px;color:var(--t2)">수입 합계 <span style="font-family:var(--mono);color:var(--green);font-weight:600">${f(incTot)}원</span></div>`;
+
+  // 지출 상세
+  const fixedTotVal=Object.values(fixedData).reduce((s,v)=>s+v,0);
+  document.getElementById('hh-fixed-title').textContent=`${mn} 고정비`;
+  document.getElementById('hh-fixed-detail').innerHTML=Object.entries(fixedData).map(([k,v])=>`<div class="pr-row"><div class="pr-lbl">${k}</div><div class="pr-wrap"><div class="pr-fill" style="width:${Math.round(v/fixedTotVal*100)}%;background:var(--red)"></div></div><div class="pr-val vr">${f(v)}원</div></div>`).join('')+`<div style="border-top:1px solid var(--border);padding-top:9px;margin-top:5px;font-size:13px;color:var(--t2)">고정비 합계 <span style="font-family:var(--mono);color:var(--red);font-weight:600">${f(fixedTotVal)}원</span></div>`;
+
+  document.getElementById('hh-var-title').textContent=`${mn} 변동비`;
+  const sorted=Object.entries(varData).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('hh-var-bars').innerHTML=sorted.map(([cat,val])=>{const p=Math.round(val/varTot*100);return`<div class="pr-row"><div class="pr-lbl">${cat}</div><div class="pr-wrap"><div class="pr-fill" style="width:${p}%;background:${HH_C[cat]||'#4e6880'}"></div></div><div class="pr-val" style="color:${HH_C[cat]||'var(--t2)'}">${f(val)}원 (${p}%)</div></div>`;}).join('');
+
+  MODALS['hh_income_'+m]={title:`${mn} 수입 상세`,sub:'개인+개인사업자 (법인 제외)',body:`<table><thead><tr><th>항목</th><th style="text-align:right">금액</th><th style="text-align:right">비율</th></tr></thead><tbody>${incItems.filter(i=>incData[i.k]>0).map(i=>`<tr><td>${i.label}</td><td class="tr vg">${f(incData[i.k])}</td><td class="tr v2">${Math.round(incData[i.k]/incTot*100)}%</td></tr>`).join('')}<tr class="tot"><td>합계</td><td class="tr vg">${f(incTot)}</td><td></td></tr></tbody></table>`};
+  MODALS['hh_exp_'+m]={title:`${mn} 지출 상세`,sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">고정비</div><div class="kval vr">${f(fixedTot)}</div><div class="ksub">수입의 ${Math.round(fixedTot/incTot*100)}%</div></div><div class="kc"><div class="klb">변동비</div><div class="kval vo">${f(varTot)}</div><div class="ksub">수입의 ${Math.round(varTot/incTot*100)}%</div></div></div>`};
+  MODALS['hh_net_'+m]={title:`${mn} 순수입 분석`,sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">수입</div><div class="kval vg">${f(incTot)}</div></div><div class="kc"><div class="klb">지출</div><div class="kval vr">${f(expTot)}</div></div><div class="kc" style="grid-column:span 2;background:${netInc>=0?'rgba(29,233,182,.08)':'rgba(240,80,112,.08)'}"><div class="klb">순수입</div><div class="kval" style="color:${netInc>=0?'var(--blue)':'var(--red)'}">${netInc>=0?'':'-'}${f(Math.abs(netInc))}</div></div></div><div class="tip tb2" style="margin-top:10px">재투자(비래동공사+서울린지가수금)는 지출에서 제외했습니다. 이는 자산 전환이므로 별도 추적합니다.</div>`};
+}
+
+function renderHHIncChart(){
+  dc('hh-income');
+  const ctx=document.getElementById('c-hh-income');if(!ctx)return;
+  const labels=HH_MONTHS.map(m=>m.replace('2026-','')+'월');
+  const incKeys=['hive60','biraedong','child_benefit','child_allow','other'];
+  const incColors=['#1de9b6','#22d3ee','#5096f8','#b090f8','#f5a030'];
+  const incLabels=['하이브60%','비래동임대','육아급여','아동수당','기타'];
+  charts['hh-income']=new Chart(ctx,{type:'bar',data:{labels,datasets:incKeys.map((k,i)=>({label:incLabels[i],data:HH_MONTHS.map(m=>HH_INC[m][k]||0),backgroundColor:incColors[i],borderRadius:2,stack:'s'}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:TK,grid:{display:false}},y:{stacked:true,ticks:{...TK,callback:v=>fw(v)},grid:GR}}}});
+}
+
+function updateScenario(){
+  const val=parseInt(document.getElementById('save-slider').value);
+  document.getElementById('save-slider-val').textContent=val+'만원';
+  const year=val*12;
+  // 월세 val만원, 수익률 6% → 부동산 가격 = 월세×12/0.06
+  const propVal=Math.round(val*10000*12/0.06/10000);
+  document.getElementById('scenario-result').innerHTML=`
+    <div class="sr-item"><div class="sr-label">주간 예산</div><div class="sr-val vb">${(val/4.3).toFixed(1)}만원<br><span style="font-size:12px;color:var(--t3)">/주</span></div></div>
+    <div class="sr-item"><div class="sr-label">연간 절약액</div><div class="sr-val vg">${fw(year*10000)}</div></div>
+    <div class="sr-item"><div class="sr-label">= 월세 ${val}만 수익형 부동산<br>(수익률 6%)</div><div class="sr-val vo">${fw(propVal*10000)}<br><span style="font-size:11px;color:var(--t3)">매매가 기준</span></div></div>`;
+}
+function renderHHChange(){
+  document.getElementById('hh-change-table').innerHTML=`<table>
+    <thead><tr><th>월</th><th style="text-align:right">수입</th><th style="text-align:right">고정비</th><th style="text-align:right">변동비</th><th style="text-align:right">전월 대비</th></tr></thead>
+    <tbody>${HH_MONTHS.map((m,i)=>{
+      const inc=Object.values(HH_INC[m]).reduce((s,v)=>s+v,0);
+      const fx=Object.values(HH_FIXED[m]).reduce((s,v)=>s+v,0);
+      const vr=Object.values(HH_VAR[m]).reduce((s,v)=>s+v,0);
+      const tot=fx+vr;
+      const prev_tot=i>0?Object.values(HH_FIXED[HH_MONTHS[i-1]]).reduce((s,v)=>s+v,0)+Object.values(HH_VAR[HH_MONTHS[i-1]]).reduce((s,v)=>s+v,0):null;
+      const chg=prev_tot?Math.round((tot/prev_tot-1)*100):null;
+      return`<tr><td>${m.replace('2026-','')+'월'}</td><td class="tr vg">${f(inc)}</td><td class="tr vr">${f(fx)}</td><td class="tr vo">${f(vr)}</td><td class="tr" style="color:${chg===null?'var(--t3)':chg<=0?'var(--green)':'var(--red)'}">${chg===null?'—':chg+'%'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ══ 부채 ══
+function renderDebts(){
+  const hj=DEBTS.filter(d=>d.owner==='호정');
+  const dh=DEBTS.filter(d=>d.owner==='득희');
+  const maxB=Math.max(...DEBTS.map(d=>d.bal));
+  const render=list=>list.map(d=>`
+    <div style="padding:12px 0;border-bottom:1px solid var(--border3);cursor:pointer" onclick="openModal('dbt_${d.name.replace(/[^a-z0-9가-힣]/gi,'_')}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+          <span style="font-size:14px;font-weight:500">${d.name}</span>
+          ${d.alert?`<span class="bdg ${d.alert.includes('만기')||d.alert.includes('임박')?'br2':d.alert.includes('최고')?'br2':'bo2'}">${d.alert}</span>`:''}
+        </div>
+        <div style="font-family:var(--mono);font-size:17px;font-weight:600;color:var(--red)">${fw(d.bal)}</div>
+      </div>
+      <div class="debt-bar-wrap"><div class="debt-bar-fill" style="width:${Math.round(d.bal/maxB*100)}%;background:${d.rate>6?'var(--red)':d.rate>5?'var(--amber)':'var(--blue)'}"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--t3);margin-top:4px">
+        <span>금리 <span style="color:${d.rate>6?'var(--red)':d.rate>5?'var(--amber)':'var(--blue)'};font-family:var(--mono);font-weight:600">${d.rate}%</span></span>
+        <span>만기 <span style="font-family:var(--mono)">${d.maturity}</span></span>
+        <span>월이자 <span style="font-family:var(--mono);color:var(--red)">${f(Math.round(d.bal*d.rate/100/12))}</span></span>
+      </div>
+    </div>`).join('');
+  document.getElementById('debt-hj').innerHTML=render(hj)+`<div style="padding-top:9px;font-size:13px;color:var(--t2)">소계 <span style="font-family:var(--mono);color:var(--red);font-weight:600">${f(hj.reduce((s,d)=>s+d.bal,0))}원</span></div>`;
+  document.getElementById('debt-dh').innerHTML=render(dh)+`<div style="padding-top:9px;font-size:13px;color:var(--t2)">소계 <span style="font-family:var(--mono);color:var(--red);font-weight:600">${f(dh.reduce((s,d)=>s+d.bal,0))}원</span></div>`;
+  DEBTS.forEach(d=>{
+    const k='dbt_'+d.name.replace(/[^a-z0-9가-힣]/gi,'_');
+    MODALS[k]={title:d.name,sub:`${d.owner} · ${d.rate}% · 만기 ${d.maturity}`,body:`<div class="kgrid"><div class="kc"><div class="klb">잔액</div><div class="kval vr">${f(d.bal)}</div></div><div class="kc"><div class="klb">금리</div><div class="kval" style="color:${d.rate>6?'var(--red)':d.rate>5?'var(--amber)':'var(--blue)'}">${d.rate}%</div></div><div class="kc"><div class="klb">월 이자</div><div class="kval vr">${f(Math.round(d.bal*d.rate/100/12))}</div></div><div class="kc"><div class="klb">연 이자</div><div class="kval vr">${f(Math.round(d.bal*d.rate/100))}</div></div></div>${d.alert?`<div class="tip ${d.alert.includes('만기')||d.alert.includes('임박')||d.alert.includes('최고')?'tr3':'to2'}" style="margin-top:10px">${d.alert}</div>`:''}`};
+  });
+}
+
+// ══ 마일스톤 (월별 표) ══
+const MS_ROWS_5Y=[
+  {y:2026,m:'04',event:'황문진 301호 입주 (4/20)',cash:'6,730만',rent:'265만',biz:'하이브 1,482만',asset:'',note:'4가구 체계 완성'},
+  {y:2026,m:'06',event:'카카오뱅크 만기 대응 결정',cash:'',rent:'265만',biz:'',asset:'',note:'연장 or 대환'},
+  {y:2026,m:'하반기',event:'공실 해소 목표 (5가구→9가구)',cash:'',rent:'480만(목표)',biz:'',asset:'',note:'이자 커버율 251%'},
+  {y:2027,m:'02',event:'비래동 경락대출 만기',cash:'',rent:'',biz:'',asset:'',note:'매도 or 재대출'},
+  {y:2027,m:'02',event:'우리WON 만기',cash:'',rent:'',biz:'',asset:'',note:'갱신 처리'},
+  {y:2027,m:'상반기',event:'득희 고금리 대환 7.38% 조기상환',cash:'',rent:'',biz:'',asset:'',note:'우선상환 목표'},
+  {y:2027,m:'하반기',event:'서울린지 대여금 전액 회수',cash:'',rent:'',biz:'서울린지 흑자',asset:'대여금 회수',note:''},
+  {y:2028,m:'연중',event:'잠실하이브 재계약 협상',cash:'',rent:'',biz:'70/30 목표',asset:'',note:'호정 60→70%'},
+  {y:2029,m:'연중',event:'비래동 매도 or 2번째 수익형 취득',cash:'매도차익 3.1억',rent:'',biz:'',asset:'',note:''},
+  {y:2030,m:'12',event:'재정 독립 1단계 점검',cash:'목표 5억',rent:'목표 300만',biz:'',asset:'금융자산 1억',note:''},
+];
+const MS_ROWS_LONG=[
+  {y:'2031~33',event:'수익형 자산 2개 이상',cash:'',rent:'300만+',biz:'',note:'월임대 300만 안정화'},
+  {y:'2033~35',event:'비근로소득이 생활비 커버',cash:'',rent:'',biz:'흑자 법인',note:'조기퇴직 옵션 검토'},
+  {y:'2036',event:'10년 성과 점검',cash:'15억 목표',rent:'',biz:'',note:'자녀 교육자금 설계'},
+  {y:'2040',event:'완전한 재정 독립',cash:'',rent:'전 생활비 커버',biz:'',note:'모든 부채 상환'},
+  {y:'2046',event:'부의 이전 준비',cash:'',rent:'',biz:'',note:'상속·증여 최적화'},
+];
+function renderMilestone(){
+  const tbody5=document.getElementById('ms-tbody-5y');
+  if(tbody5) tbody5.innerHTML=MS_ROWS_5Y.map(r=>`<tr>
+    <td style="font-family:var(--mono);color:var(--blue);font-weight:600">${r.y}</td>
+    <td style="font-family:var(--mono);color:var(--amber)">${r.m}</td>
+    <td style="font-weight:500;color:var(--t1)">${r.event}</td>
+    <td style="font-family:var(--mono);color:var(--green)">${r.cash}</td>
+    <td style="font-family:var(--mono);color:var(--sky)">${r.rent}</td>
+    <td style="font-family:var(--mono);color:var(--purple)">${r.biz}</td>
+    <td style="font-family:var(--mono);color:var(--amber)">${r.asset}</td>
+    <td style="font-size:11px;color:var(--t3)">${r.note}</td>
+  </tr>`).join('');
+  const tbodyL=document.getElementById('ms-tbody-long');
+  if(tbodyL) tbodyL.innerHTML=MS_ROWS_LONG.map(r=>`<tr>
+    <td style="font-family:var(--mono);color:var(--blue);font-weight:600">${r.y}</td>
+    <td style="font-weight:500;color:var(--t1)">${r.event}</td>
+    <td style="font-family:var(--mono);color:var(--green)">${r.cash}</td>
+    <td style="font-family:var(--mono);color:var(--sky)">${r.rent}</td>
+    <td style="font-family:var(--mono);color:var(--purple)">${r.biz}</td>
+    <td style="font-size:11px;color:var(--t3)">${r.note}</td>
+  </tr>`).join('');
+}
+
+// ══ 모달 공통 ══
+const MODALS={
+  nw_cash:{title:'현금성 순자산 구성',sub:'계좌+세이프박스+신협보증금 (서울린지 대여금은 투자자산)',body:`<div class="tip tb2">현금성 순자산 = 일반계좌 + 세이프박스(하이브+호정) + 신협(진우하우스) 임차보증금 수취액<br><strong>서울린지 대여금 1,650만은 투자자산으로 분류</strong> — 현금→법인채권 전환, 농산물 위탁사업 운영자금으로 활용 중</div>`},
+  nw_invest:{title:'투자자산 상세',sub:'하이브비래 3항목 + 서울린지 대여금',body:`
+    <div class="tip to2" style="margin-bottom:12px">
+      <strong>투자자산은 지출이 아닙니다.</strong> 현금이 부동산 자산과 채권으로 전환된 것입니다.<br>
+      수리비 3,297만은 임대수익 창출과 매도가 상승을 위한 <strong>가치 증대 비용</strong>입니다.
+    </div>
+    <div class="kgrid">
+      <div class="kc">
+        <div class="klb">① 자기자본 (낙찰가의 약 10%)</div>
+        <div class="kval vo">4,053만</div>
+        <div class="ksub">경매낙찰가 5.54억 - 경락대출 4.95억</div>
+      </div>
+      <div class="kc">
+        <div class="klb">② 취득세·법무사·공과금</div>
+        <div class="kval vo">1,383만</div>
+        <div class="ksub">취득 필수 비용</div>
+      </div>
+      <div class="kc">
+        <div class="klb">③ 수리·공사비 누적</div>
+        <div class="kval vo">3,297만</div>
+        <div class="ksub">씽크·도배·데코타일·방수·필로티</div>
+      </div>
+      <div class="kc">
+        <div class="klb">서울린지 대여금</div>
+        <div class="kval vp">1,650만</div>
+        <div class="ksub">농산물 위탁사업 운영자금</div>
+      </div>
+    </div>
+    <div class="tip tg2" style="margin-top:10px">수리비는 매도차익 실현을 위한 투자입니다. 목표 매도가 8.5억 기준 예상 순차익 ~3.1억.</div>
+  `},
+  nw_total:{title:'실질 총자산 계산식',sub:'',body:`<table><thead><tr><th>항목</th>${NW_MO.map(m=>`<th style="text-align:right">${m.replace('2026-','')+'월'}</th>`).join('')}</tr></thead><tbody><tr><td>현금성 순자산</td>${NW_MO.map(m=>`<td class="tr vg">${fw(nwCalc(m).cash)}</td>`).join('')}</tr><tr><td>투자자산</td>${NW_MO.map(m=>`<td class="tr vo">${fw(nwCalc(m).invest)}</td>`).join('')}</tr><tr class="tot"><td>실질 총자산</td>${NW_MO.map(m=>`<td class="tr vb">${fw(nwCalc(m).total)}</td>`).join('')}</tr></tbody></table>`},
+  ta_total:{title:'총 자산 구성',sub:'시세 기준',body:`<div class="tip tg2">총 자산 16억 7,880만 - 총 부채 9억 3,940만 = 순자산 약 7억 3,940만원</div>`},
+  ta_real:{title:'투자부동산 상세',sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">하이브비래 목표매도</div><div class="kval vo">8억 5,000만</div></div><div class="kc"><div class="klb">평창리 토지</div><div class="kval vo">4억 5,000만</div><div class="ksub">용인시 처인구</div></div><div class="kc"><div class="klb">잠실 임차보증금</div><div class="kval vo">1억</div></div></div>`},
+  ta_fin:{title:'금융+퇴직금 상세',sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">현금성 순자산</div><div class="kval vg">6,730만</div></div><div class="kc"><div class="klb">서울린지 대여금</div><div class="kval vp">1,650만</div></div><div class="kc"><div class="klb">S&P ETF</div><div class="kval vb">500만</div></div><div class="kc"><div class="klb">퇴직금 예상(호정)</div><div class="kval v2">1억 3,000만</div></div><div class="kc"><div class="klb">퇴직금 예상(득희)</div><div class="kval v2">6,000만</div></div></div>`},
+  hive_total:{title:'4개월 총매출',sub:'',body:`<table><thead><tr><th>월</th><th style="text-align:right">총매출</th><th style="text-align:right">순이익</th><th style="text-align:right">이익률</th></tr></thead><tbody>${HIVE_MO.map(m=>{const d=HIVE_DATA[m];return`<tr><td>${m.replace('2025-','').replace('2026-','')+'월'}</td><td class="tr vg">${f(d.total)}</td><td class="tr vb">${f(d.profit)}</td><td class="tr v2">${Math.round(d.profit/d.total*100)}%</td></tr>`;}).join('')}<tr class="tot"><td>합계</td><td class="tr vg">${f(HIVE_MO.reduce((s,m)=>s+HIVE_DATA[m].total,0))}</td><td class="tr vb">${f(HIVE_MO.reduce((s,m)=>s+HIVE_DATA[m].profit,0))}</td><td class="tr">46.7%</td></tr></tbody></table>`},
+  hive_profit:{title:'순이익 구조',sub:'',body:`<div class="tip tg2">순이익 = 총매출 - (임차료+외주용역비+소모품+기타)<br>더호텔이 운영 전반 담당, 순이익의 40% 수수료. 호정은 60% 수령.</div>`},
+  hive_hj60:{title:'호정 수령(60%) 월별',sub:'',body:`<table><thead><tr><th>월</th><th style="text-align:right">호정 60%</th></tr></thead><tbody>${HIVE_MO.map(m=>`<tr><td>${m.replace('2025-','').replace('2026-','')+'월'}</td><td class="tr vo">${f(HIVE_DATA[m].hj60)}</td></tr>`).join('')}</tbody></table>`},
+  sl_toss:{title:'Toss 정산 상세',sub:'농산물 위탁판매',body:`<table><thead><tr><th>월</th><th style="text-align:right">정산액</th><th>비고</th></tr></thead><tbody>${['2026-01','2026-02','2026-03'].map(m=>`<tr><td>${m.replace('2026-','')+'월'}</td><td class="tr vp">${f(SL_DATA[m].toss)}</td><td style="font-size:12px;color:var(--t3)">${SL_DATA[m].note}</td></tr>`).join('')}</tbody></table>`},
+  sl_loan:{title:'대여금 상세',sub:'서울린지 농산물 운영자금',body:`<div class="tip tp2">대표이사 단기대여금 = 호정 개인 → 서울린지 법인<br><strong>용도: 농산물 위탁사업 운영자금</strong> — 당분간 대여금으로 운영 유지<br>Toss 월 매출 1,824만(3월) 기준 사업성 확인 → 향후 대여금 상환 예정</div><table><thead><tr><th>월</th><th style="text-align:right">신규</th><th style="text-align:right">누적</th></tr></thead><tbody>${['2026-01','2026-02','2026-03'].map(m=>`<tr><td>${m.replace('2026-','')+'월'}</td><td class="tr vo">${f(SL_DATA[m].loan_new)}</td><td class="tr vo" style="font-weight:600">${f(SL_DATA[m].loan_cum)}</td></tr>`).join('')}</tbody></table>`},
+  sl_growth:{title:'매출 성장 분석',sub:'3개월 460% 성장',body:`<div class="tip tg2"><strong>1월 325만 → 2월 1,090만 → 3월 1,824만</strong><br>3개월 만에 460% 성장. Toss·쿠팡·올웨이즈 복합 채널 확장 효과.<br>사업성 확인 → 대여금 상환 충분히 가능한 수준.</div>`},
+  bd_cost:{title:'낙찰가 및 취득',sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">낙찰가</div><div class="kval vb">5억 5,400만</div></div><div class="kc"><div class="klb">경락대출</div><div class="kval vr">4억 9,505만</div></div><div class="kc"><div class="klb">자기자금(낙찰-대출)</div><div class="kval vo">5,895만</div></div></div>`},
+  bd_debt:{title:'경락대출 상세',sub:'신협 / 4.70% / 납부일 매월 19일',body:`<div class="kgrid"><div class="kc"><div class="klb">대출 잔액</div><div class="kval vr">4억 9,505만</div></div><div class="kc"><div class="klb">금리</div><div class="kval vr">4.70%</div></div><div class="kc"><div class="klb">만기</div><div class="kval vo">2027.02</div></div><div class="kc"><div class="klb">월이자 (매월 19일)</div><div class="kval vr">191만</div></div></div><div class="tip to2" style="margin-top:10px">만기 2027.02 — 비래동 매도 여부 결정 필요. 2026년 말까지 매도 or 재대출 검토.</div>`},
+  bd_invest:{title:'자기자본 투입 상세',sub:'취득비 + 공사비',body:`<div class="kgrid"><div class="kc"><div class="klb">취득비</div><div class="kval vr">1,383만</div><div class="ksub">취등록세+법무사+공과금</div></div><div class="kc"><div class="klb">공사비</div><div class="kval vr">2,241만</div><div class="ksub">씽크·도배·데코타일·방수 등</div></div><div class="kc"><div class="klb">기타</div><div class="kval vr">200만</div><div class="ksub">청소·중개·간판 등</div></div><div class="kc" style="background:var(--a3)"><div class="klb">자기자본 합계</div><div class="kval vo">5,824만</div></div></div>`},
+  bd_interest:{title:'월이자 상세',sub:'매월 19일 납부',body:`<div class="kgrid"><div class="kc"><div class="klb">월이자</div><div class="kval vr">1,912,402</div></div><div class="kc"><div class="klb">연이자</div><div class="kval vr">22,948,824</div></div><div class="kc"><div class="klb">현재 월세</div><div class="kval vg">2,050,000</div></div><div class="kc"><div class="klb">이자 커버율</div><div class="kval vg">107%</div></div></div>`},
+  bd_rent:{title:'임대 수익 시나리오',sub:'',body:`<table><thead><tr><th>시나리오</th><th style="text-align:right">월세</th><th style="text-align:right">이자커버율</th></tr></thead><tbody><tr><td>현재 3가구</td><td class="tr vg">2,050,000</td><td class="tr vg">107%</td></tr><tr style="background:var(--b3)"><td>4/20 후 4가구</td><td class="tr vb">2,650,000</td><td class="tr vb">138%</td></tr><tr><td>전체 9가구</td><td class="tr vg">4,800,000</td><td class="tr vg">251%</td></tr></tbody></table>`},
+  bd_sell:{title:'매도 시나리오',sub:'목표 매도가 8.5억',body:`<div class="kgrid"><div class="kc"><div class="klb">목표 매도가</div><div class="kval vg">8억 5,000만</div></div><div class="kc"><div class="klb">총 매입원가</div><div class="kval vr">5억 9,024만</div></div><div class="kc"><div class="klb">예상 차익(세전)</div><div class="kval vg">2억 5,976만</div></div><div class="kc"><div class="klb">대출 상환 후 순차익</div><div class="kval vb">~3억 1,000만</div></div></div><div class="tip tg2" style="margin-top:10px">매도 시 약 3.1억 순차익으로 새로운 수익형 자산 취득 가능.</div>`},
+  debt_total:{title:'총 부채 구성',sub:'',body:`<table><thead><tr><th>소유</th><th>대출</th><th style="text-align:right">잔액</th><th style="text-align:right">금리</th></tr></thead><tbody>${DEBTS.map(d=>`<tr><td><span class="bdg ${d.owner==='호정'?'bg2':'bb2'}">${d.owner}</span></td><td>${d.name}</td><td class="tr vr">${f(d.bal)}</td><td class="tr" style="color:${d.rate>6?'var(--red)':d.rate>5?'var(--amber)':'var(--blue)'}">${d.rate}%</td></tr>`).join('')}<tr class="tot"><td colspan="2">합계</td><td class="tr vr">${f(DEBTS.reduce((s,d)=>s+d.bal,0))}</td><td></td></tr></tbody></table>`},
+  debt_priority:{title:'카카오뱅크 만기 대응',sub:'2026.09',body:`<div class="tip tr3">잔액 3,000만 / 금리 5.505% / 2026.09 만기<br>6월까지 연장 또는 대환 결정 필요.</div>`},
+  debt_interest:{title:'월 이자 상세',sub:'',body:`<table><thead><tr><th>대출</th><th style="text-align:right">금리</th><th style="text-align:right">월이자</th></tr></thead><tbody>${DEBTS.map(d=>`<tr><td>${d.name}</td><td class="tr" style="color:${d.rate>6?'var(--red)':d.rate>5?'var(--amber)':'var(--blue)'}">${d.rate}%</td><td class="tr vr">${f(Math.round(d.bal*d.rate/100/12))}</td></tr>`).join('')}<tr class="tot"><td colspan="2">합계</td><td class="tr vr">${f(DEBTS.reduce((s,d)=>s+Math.round(d.bal*d.rate/100/12),0))}</td></tr></tbody></table>`},
+  credit_hj:{title:'호정 신용정보',sub:'KCB 910 / NICE 896',body:`<div class="kgrid"><div class="kc"><div class="klb">KCB</div><div class="kval vb">910점</div><div class="ksub">상위 44%</div></div><div class="kc"><div class="klb">NICE</div><div class="kval vg">896점</div><div class="ksub">상위 49%</div></div><div class="kc"><div class="klb">예상 최저 금리</div><div class="kval vo">5.29%</div></div></div><div class="tip tb2" style="margin-top:10px">2024년 근로소득 9,286만 / 소득금액 7,847만 (주식회사 누비지오). 2025.07.01~ 육아휴직 중.</div>`},
+  credit_dh:{title:'득희 신용정보',sub:'KCB 927 / NICE 854',body:`<div class="kgrid"><div class="kc"><div class="klb">KCB</div><div class="kval vg">927점</div><div class="ksub">상위 39%</div></div><div class="kc"><div class="klb">NICE</div><div class="kval vg">854점</div><div class="ksub">상위 58%</div></div><div class="kc"><div class="klb">예상 최저 금리</div><div class="kval vo">5.29%</div></div></div><div class="tip tb2" style="margin-top:10px">2024년 근로소득 7,122만 / 소득금액 5,791만 (주식회사 누비지오). 2025.07.01~ 육아휴직 중.</div>`},
+  credit_dsr_hj:{title:'호정 DSR 분석',sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">호정 연소득 (2024)</div><div class="kval vg">9,286만</div></div><div class="kc"><div class="klb">귀속 연간 이자</div><div class="kval vr">3,546만</div><div class="ksub">토스5.57%+카카오5.505%+우리WON4.51%</div></div><div class="kc" style="background:rgba(245,160,48,.08)"><div class="klb">DSR</div><div class="kval vo">38.1%</div></div></div><div class="tip tr3" style="margin-top:10px">DSR 40% 한도 근접. 신규 대출 사실상 불가. 카카오뱅크 9월 만기 → 기존 부채 대환(교체)은 가능.</div>`},
+  credit_dsr_dh:{title:'득희 DSR 분석',sub:'',body:`<div class="kgrid"><div class="kc"><div class="klb">득희 연소득 (2024)</div><div class="kval vg">7,122만</div></div><div class="kc"><div class="klb">귀속 연간 이자</div><div class="kval vr">5,154만</div><div class="ksub">경락4.7%+토스대환7.38%+토스6.62%+NH5.06%</div></div><div class="kc" style="background:rgba(240,80,112,.08)"><div class="klb">DSR</div><div class="kval vr">72.4%</div></div></div><div class="tip tr3" style="margin-top:10px">비래동 경락대출(4.95억)이 대부분 차지. 비래동 매도 시 DSR 급감 예상. 현재 신규 대출 불가 수준.</div>`},
+  nw_cash:{title:'현금성 순자산 구성',sub:'신협 보증금 포함 / 대여금은 투자자산',body:`<div class="tip tb2">현금성 순자산 = 일반계좌 + 세이프박스(하이브+호정) + 신협(진우하우스) 임차보증금 수취액</div><div class="tip to2"><strong>신협 보증금 처리:</strong> 강귀남(640만)+진선빌(335만)=975만 수취 후 일부 수리비로 투에이치 계좌 이동. 현재 신협 잔고 기준 반영. 황문진(4/20 입주) 700만 추가 수취 예정.</div><div class="tip tp2"><strong>서울린지 대여금 1,650만은 투자자산으로 분류</strong> — 농산물 위탁사업 운영자금</div>`},
+};
+
+function openModal(key){const d=MODALS[key];if(!d)return;document.getElementById('m-title').textContent=d.title;document.getElementById('m-sub').textContent=d.sub;document.getElementById('m-body').innerHTML=d.body;document.getElementById('modal-bg').classList.add('on');}
+function closeModal(){document.getElementById('modal-bg').classList.remove('on');}
+
+// ══ 마일스톤 타임라인 ══
+const MS_ROWS=[
+  {id:'sec-inc',  type:'section', label:'수입'},
+  {id:'hive',     cat:'사업소득',  label:'하이브 60%',     type:'num', unit:'만', color:'--green',  tip:'잠실하이브 순이익×60% 수령액'},
+  {id:'rent',     cat:'임대소득',  label:'비래동 임대',    type:'num', unit:'만', color:'--green',  tip:'비래동 다가구 월세 수입. 4월 4가구→연말 9가구 목표'},
+  {id:'sl_sales', cat:'사업소득',  label:'서울린지 정산',  type:'num', unit:'만', color:'--blue',   tip:'Toss·쿠팡·올웨이즈 위탁판매 정산 합계'},
+  {id:'parental', cat:'급여',      label:'육아급여+수당',  type:'num', unit:'만', color:'--green',  tip:'육아휴직급여 + 아동수당 합계'},
+  {id:'sec-exp',  type:'section', label:'지출'},
+  {id:'loan_int', cat:'고정비',    label:'대출이자',        type:'num', unit:'만', color:'--red',    tip:'전체 대출 월이자 합계'},
+  {id:'insurance',cat:'고정비',    label:'보험+관리비',     type:'num', unit:'만', color:'--red',    tip:'보험료 약 31만 + 월 관리비'},
+  {id:'living',   cat:'변동비',    label:'생활비+변동',    type:'num', unit:'만', color:'--red',    tip:'식비·쇼핑·의료 등 변동 지출'},
+  {id:'sec-inv',  type:'section', label:'투자·자산'},
+  {id:'repair',   cat:'하이브비래',label:'비래동 공사비',  type:'num', unit:'만', color:'--amber',  tip:'수리·인테리어 등 비래동 투자 집행액'},
+  {id:'sl_loan',  cat:'서울린지', label:'대여금 투입',     type:'num', unit:'만', color:'--amber',  tip:'대표이사→서울린지 운영자금 대여'},
+  {id:'deposit',  cat:'하이브비래',label:'보증금 수취',    type:'num', unit:'만', color:'--blue',   tip:'임차보증금 수취 (양수 = 현금 유입)'},
+  {id:'sec-sl',   type:'section', label:'서울린지 목표'},
+  {id:'sl_goal',  cat:'월 목표',   label:'월 매출 목표',   type:'num', unit:'만', color:'--blue',   tip:'채널 합산 월 매출 목표치'},
+  {id:'sl_opinc', cat:'영업이익',  label:'목표 영업이익',  type:'num', unit:'만', color:'--blue',   tip:'매출원가·수수료 차감 후 영업이익 목표'},
+  {id:'sec-re',   type:'section', label:'부동산·경매·임장'},
+  {id:'auction',  cat:'경매',      label:'경매 이벤트',    type:'event',color:'--amber', tip:'입찰 예정·낙찰·유찰 등'},
+  {id:'inspect',  cat:'임장',      label:'임장·조사',      type:'event',color:'--t2',    tip:'임장 지역·날짜·결과'},
+  {id:'re_event', cat:'부동산',    label:'매수·매도',      type:'event',color:'--amber', tip:'계약·잔금 등 주요 부동산 이벤트'},
+  {id:'sec-life', type:'section', label:'개인·부채·자산 회수'},
+  {id:'pyeongchang',cat:'자산회수', label:'평창리 회수',   type:'num', unit:'만', color:'--green',
+   tip:'2026년 9월 예상 회수. 1억 신용대출 상환 + 서울 아파트 매수 재원. 실제 회수액 슬라이더로 시뮬레이션 가능.'},
+  {id:'retirement', cat:'퇴직금',   label:'퇴직금 수령',   type:'num', unit:'만', color:'--green',
+   tip:'평창리 회수 후 퇴사 결정 시 수령. 호정 약 1.3억 + 득희 약 6천만. 퇴사 시점에 연동.'},
+  {id:'apt_buy',    cat:'부동산',   label:'서울 아파트 매수', type:'event', color:'--blue',
+   tip:'평창리 회수 자금으로 서울 11억 이하 아파트 매수 예정. 9월 이후.'},
+  {id:'personal', cat:'개인',      label:'개인 이벤트',    type:'event',color:'--blue',  tip:'복직·이사·목표 달성 등'},
+  {id:'debt_evt', cat:'부채',      label:'만기·대환',      type:'event',color:'--red',   tip:'대출 만기·대환·상환 이벤트'},
+];
+
+// 연도별 프리셋 데이터
+const MS_PRESET={
+  2026:{
+    hive:     [1202,1239,1482,1482,1482,1482,1482,1482,1482,1482,1482,1482],
+    rent:     [0,0,205,265,265,320,320,400,480,480,480,480],
+    sl_sales: [325,1090,1824,0,0,0,0,0,0,0,0,0],
+    parental: [460,260,10,10,10,10,10,10,10,10,10,10],
+    loan_int: [194,147,296,296,296,296,296,296,250,250,250,250],
+    insurance:[78,188,88,88,88,88,88,88,88,88,88,88],
+    living:   [500,500,400,150,300,300,300,300,300,300,300,300],
+    repair:   [0,2200,1097,0,0,0,0,0,0,0,0,0],
+    sl_loan:  [500,450,700,0,0,0,0,0,0,0,0,0],
+    deposit:  [0,0,975,700,0,0,0,0,0,0,0,0],
+    sl_goal:  [500,1000,1500,2000,2000,2000,2500,2500,3000,3000,3000,3000],
+    sl_opinc: [50,100,300,400,400,400,500,500,600,600,600,600],
+    // ★ 평창리 2026년 9월 회수 (금액은 슬라이더로 조정)
+    pyeongchang:[0,0,0,0,0,0,0,0,45000,0,0,0],
+    // 퇴직금: 퇴사 시점 미정 → 9월 이후 결정 시 입력
+    retirement: [0,0,0,0,0,0,0,0,0,0,0,0],
+    auction:  ['','','','','','','','','','','',''],
+    inspect:  ['','대전 대덕구 임장','','','경기 용인 임장','','','','','','',''],
+    re_event: ['','','황문진 301호 입주(4/20)','','','','','','','','',''],
+    apt_buy:  ['','','','','','','','','서울 아파트 매수 검토','서울 아파트 계약','',''],
+    personal: ['','','','카카오뱅크 만기 검토','','카카오뱅크 대응 시한','육아휴직 1년','','평창리 회수→퇴사 결정','서울린지 직원등록','','2027 비래동 결정'],
+    debt_evt: ['','','','','','','','','카카오뱅크 3,000만 만기 / 신용대출 1억 상환','','',''],
+  },
+  2027:{
+    hive:     [1500,1500,1500,1500,1500,1500,1500,1500,1500,1500,1500,1500],
+    rent:     [480,480,480,480,480,480,480,480,480,480,480,480],
+    sl_sales: [2000,2000,2000,2000,2000,2000,2500,2500,3000,3000,3000,3000],
+    parental: [0,0,0,0,0,0,0,0,0,0,0,0],
+    loan_int: [200,200,200,200,200,200,200,200,200,200,200,200],
+    insurance:[80,80,80,80,80,80,80,80,80,80,80,80],
+    living:   [300,300,300,300,300,300,300,300,300,300,300,300],
+    repair:   [0,0,0,0,0,0,0,0,0,0,0,0],
+    sl_loan:  [0,0,0,0,0,0,0,0,0,0,0,0],
+    deposit:  [0,0,0,0,0,0,0,0,0,0,0,0],
+    sl_goal:  [2000,2000,2000,2000,2000,2000,2500,2500,3000,3000,3000,3000],
+    sl_opinc: [400,400,400,400,400,400,500,500,600,600,600,600],
+    // 퇴직금: 퇴사 시점에 따라 수령 — 호정 1.3억 + 득희 6천만 예상
+    pyeongchang:[0,0,0,0,0,0,0,0,0,0,0,0],
+    retirement: [19000,0,0,0,0,0,0,0,0,0,0,0], // 퇴사 시점 미정 → 2027 초 가정
+    auction:  Array(12).fill(''),
+    inspect:  Array(12).fill(''),
+    re_event: ['','','','','','','','','','','','비래동 매도 or 재대출 결정'],
+    apt_buy:  Array(12).fill(''),
+    personal: ['서울린지 보수 정상화','','','','','','','','','','',''],
+    debt_evt: ['','비래동 경락대출 만기(2027.02)','','','','','','','','','',''],
+  },
+};
+// 2028~2030 기본 구조
+[2028,2029,2030].forEach(y=>{
+  MS_PRESET[y]={
+    hive:Array(12).fill(1600),rent:Array(12).fill(500),sl_sales:Array(12).fill(3000),
+    parental:Array(12).fill(0),loan_int:Array(12).fill(180),insurance:Array(12).fill(80),
+    living:Array(12).fill(300),repair:Array(12).fill(0),sl_loan:Array(12).fill(0),
+    deposit:Array(12).fill(0),sl_goal:Array(12).fill(3000),sl_opinc:Array(12).fill(600),
+    pyeongchang:Array(12).fill(0),retirement:Array(12).fill(0),
+    auction:Array(12).fill(''),inspect:Array(12).fill(''),re_event:Array(12).fill(''),
+    apt_buy:Array(12).fill(''),personal:Array(12).fill(''),debt_evt:Array(12).fill(''),
+  };
+});
+
+// 편집 중 셀 상태
+let MS_DATA={};
+let msYear=2026, msCurRow=null, msCurMo=null;
+
+function initMsData(y){
+  if(MS_DATA[y]) return;
+  const p=MS_PRESET[y]||{};
+  MS_DATA[y]={};
+  MS_ROWS.filter(r=>r.type!=='section').forEach(r=>{
+    MS_DATA[y][r.id]=Array.from({length:12},(_,i)=>({
+      val: r.type==='num'?(p[r.id]?.[i]??''):'',
+      text: r.type==='event'?(p[r.id]?.[i]||''):'',
+      note:''
+    }));
+  });
+}
+
+const MS_YEAR_AI={
+  2026:'⭐ 2026년 최대 이벤트: 평창리 토지 투자금 4.5억 회수(9월 예상). 이 자금으로 신용대출 1억 상환 + 서울 11억 이하 아파트 매수 + 퇴사·서울린지 등록이 연쇄적으로 진행됩니다. 그 외: 비래동 공실 해소(9가구 목표), 카카오뱅크 9월 만기 대응, 서울린지 월 3,000만 성장.',
+  2027:'2027년 핵심: ① 비래동 경락대출 만기(2027.02) — 매도 vs 재대출 결정 ② 퇴직금 수령(호정 1.3억+득희 6천만) — 퇴사 시점 확정 시 ③ 서울린지 대여금 전액 상환 목표. 평창리 회수 후 아파트 전세대출 이자 + 서울린지 보수 소득으로 생활 구조 전환.',
+  2028:'2028년: 잠실하이브 재계약 협상 시기(70/30 목표). 서울린지 법인 흑자전환. 비래동 또는 신규 경매 물건 2호기 검토.',
+  2029:'2029년: 비래동 매도 결정 연도. 순차익 ~3.1억 실현 시 2번째 수익형 자산 취득 가능. 자산 포트폴리오 재편 시점.',
+  2030:'2030년: 재정 독립 1단계 점검. 수익자산 월 현금흐름 > 고정지출 달성 여부 확인. 순자산 5억 목표.',
+};
+
+function setMsYear(y, el){
+  msYear=y;
+  document.querySelectorAll('#ms-year-tabs .mo-tab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  initMsData(y);
+  msCancelEdit();
+  renderMsTimeline();
+}
+
+function renderMsTimeline(){
+  const y=msYear;
+  initMsData(y);
+  const MO_LABELS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  // AI 코멘트
+  document.getElementById('ms-ai-text').textContent=MS_YEAR_AI[y]||`${y}년 마일스톤 데이터를 입력해주세요.`;
+
+  // 헤더
+  document.getElementById('ms-tl-head').innerHTML=`<tr>
+    <th style="text-align:left;padding:7px 12px;background:var(--bg2);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-size:11px;font-weight:600;color:var(--t3);white-space:nowrap;position:sticky;left:0;z-index:2;min-width:110px">항목</th>
+    ${MO_LABELS.map(m=>`<th style="text-align:center;padding:7px 4px;background:var(--bg2);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-size:11px;font-weight:500;color:var(--t2);white-space:nowrap;min-width:68px">${m}</th>`).join('')}
+  </tr>`;
+
+  // 바디
+  let html='';
+  MS_ROWS.forEach(row=>{
+    if(row.type==='section'){
+      html+=`<tr><td colspan="13" style="padding:5px 12px;background:var(--bg3);border-top:1px solid var(--border2);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--t3)">${row.label}</td></tr>`;
+      return;
+    }
+    const clr=`var(${row.color})`;
+    html+=`<tr>`;
+    html+=`<td style="padding:7px 12px;border-right:1px solid var(--border2);border-bottom:1px solid var(--border3);background:var(--bg1);position:sticky;left:0;z-index:1">
+      <div style="font-size:10px;color:var(--t3);letter-spacing:.3px">${row.cat}</div>
+      <div style="font-size:12px;color:var(--t1);margin-top:1px">${row.label}</div>
+    </td>`;
+
+    for(let m=0;m<12;m++){
+      const d=MS_DATA[y][row.id][m];
+      let inner='';
+      if(row.type==='num'){
+        const v=Number(d.val)||0;
+        if(v>0){
+          inner=`<div onclick="msOpenEdit('${row.id}',${m})" style="display:inline-block;padding:3px 7px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;background:rgba(${row.color==='--green'?'29,233,182':row.color==='--red'?'240,80,112':row.color==='--amber'?'245,160,48':row.color==='--blue'?'80,150,248':'78,104,128'},.15);color:${clr};white-space:nowrap">${v.toLocaleString('ko-KR')}</div>`;
+          if(d.note) inner+=`<div style="font-size:10px;color:var(--t3);margin-top:2px">${d.note}</div>`;
+        } else {
+          inner=`<div onclick="msOpenEdit('${row.id}',${m})" style="color:var(--t4);font-size:11px;cursor:pointer;text-align:center;padding:4px 0">+</div>`;
+        }
+      } else {
+        if(d.text){
+          inner=`<div onclick="msOpenEdit('${row.id}',${m})" style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;background:rgba(${row.color==='--amber'?'245,160,48':row.color==='--red'?'240,80,112':row.color==='--blue'?'80,150,248':'142,170,200'},.15);color:${clr};white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis" title="${d.text}">${d.text}</div>`;
+        } else {
+          inner=`<div onclick="msOpenEdit('${row.id}',${m})" style="color:var(--t4);font-size:11px;cursor:pointer;text-align:center;padding:4px 0">+</div>`;
+        }
+      }
+      html+=`<td style="padding:4px;border-right:1px solid var(--border3);border-bottom:1px solid var(--border3);vertical-align:top;min-width:68px">${inner}</td>`;
+    }
+    html+='</tr>';
+  });
+  document.getElementById('ms-tl-body').innerHTML=html;
+
+  // KPI 요약
+  const d=MS_DATA[y];
+  const sumRow=id=>d[id]?d[id].reduce((s,x)=>s+(Number(x.val)||0),0):0;
+  const incSum=sumRow('hive')+sumRow('rent')+sumRow('parental');
+  const slSum=sumRow('sl_goal');
+  const pychSum=sumRow('pyeongchang');
+  const retSum=sumRow('retirement');
+  const evtCnt=['auction','inspect','re_event','apt_buy','personal','debt_evt'].reduce((s,id)=>s+(d[id]?d[id].filter(x=>x.text).length:0),0);
+  document.getElementById('ms-kpi-row').innerHTML=`
+    <div class="kc"><div class="klb">연간 수입 목표</div><div class="kval vg">${incSum>0?incSum.toLocaleString('ko-KR')+'만':'—'}</div></div>
+    <div class="kc"><div class="klb">서울린지 연 목표</div><div class="kval vb">${slSum>0?slSum.toLocaleString('ko-KR')+'만':'—'}</div></div>
+    <div class="kc click" onclick="document.getElementById('ms-pyeong-slider').scrollIntoView({behavior:'smooth'})">
+      <div class="klb">⭐ 평창리 회수 예정</div>
+      <div class="kval vg">${pychSum>0?pychSum.toLocaleString('ko-KR')+'만':'미입력'}</div>
+      <div class="ksub" style="font-size:11px">슬라이더로 시뮬레이션 ▾</div>
+    </div>
+    <div class="kc"><div class="klb">퇴직금 수령 예정</div><div class="kval vo">${retSum>0?retSum.toLocaleString('ko-KR')+'만':'시점 미정'}</div></div>`;
+}
+
+function msOpenEdit(rowId, mo){
+  const row=MS_ROWS.find(r=>r.id===rowId);
+  if(!row) return;
+  msCurRow=row; msCurMo=mo;
+  const d=MS_DATA[msYear][rowId][mo];
+  const MO_LABELS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('ms-ep-title').textContent=`${row.label} — ${msYear}년 ${MO_LABELS[mo]}`;
+  document.getElementById('ms-ep-tip').textContent=row.tip||'';
+  const prevVal=mo>0?(Number(MS_DATA[msYear][rowId][mo-1].val)||0):null;
+  let body='';
+  if(row.type==='num'){
+    const v=Number(d.val)||0;
+    body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:5px">금액 (만원)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input id="ms-ep-val" type="text" value="${v>0?v.toLocaleString('ko-KR'):''}" placeholder="0"
+            style="flex:1;padding:8px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:14px;font-family:var(--mono);text-align:right;outline:none"
+            oninput="const r=this.value.replace(/[^0-9]/g,'');this.value=r?parseInt(r).toLocaleString('ko-KR'):''">
+          <span style="color:var(--t3);font-size:13px">만</span>
+        </div>
+        <div style="font-size:12px;color:var(--t2);margin:10px 0 5px">메모</div>
+        <input id="ms-ep-note" type="text" value="${d.note||''}" placeholder="예: 부가세환급 포함"
+          style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;outline:none">
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:12px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px">참고</div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:5px">전월: <span style="font-family:var(--mono);color:var(--t1)">${prevVal!==null&&prevVal>0?prevVal.toLocaleString('ko-KR')+'만':'—'}</span></div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:5px">연 합계: <span style="font-family:var(--mono);color:var(--green)">${MS_DATA[msYear][rowId].reduce((s,x)=>s+(Number(x.val)||0),0).toLocaleString('ko-KR')}만</span></div>
+        ${row.preset?.[mo]?`<div style="margin-top:10px;padding:7px 10px;background:var(--b3);border-radius:var(--r);font-size:12px;color:var(--blue);cursor:pointer" onclick="document.getElementById('ms-ep-val').value='${Number(MS_PRESET[msYear]?.[row.id]?.[mo]||0).toLocaleString('ko-KR')}'"">💡 제안값: ${Number(MS_PRESET[msYear]?.[row.id]?.[mo]||0).toLocaleString('ko-KR')}만 (클릭 적용)</div>`:''}
+      </div>
+    </div>`;
+  } else {
+    body=`<div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:5px">이벤트 내용</div>
+      <input id="ms-ep-text" type="text" value="${d.text||''}" placeholder="예: 황문진 301호 입주 4/20"
+        style="width:100%;padding:8px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;outline:none;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--t2);margin-bottom:5px">메모</div>
+      <input id="ms-ep-note" type="text" value="${d.note||''}" placeholder="추가 메모"
+        style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--t1);font-size:13px;outline:none">
+    </div>`;
+  }
+  document.getElementById('ms-ep-body').innerHTML=body;
+  document.getElementById('ms-edit-panel').style.display='block';
+  document.getElementById('ms-edit-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function msApplyEdit(){
+  if(!msCurRow||msCurMo===null) return;
+  const d=MS_DATA[msYear][msCurRow.id][msCurMo];
+  if(msCurRow.type==='num'){
+    const vi=document.getElementById('ms-ep-val');
+    d.val=vi?parseFloat(vi.value.replace(/,/g,''))||'':'';
+  } else {
+    const ti=document.getElementById('ms-ep-text');
+    d.text=ti?ti.value:'';
+  }
+  const ni=document.getElementById('ms-ep-note');
+  d.note=ni?ni.value:'';
+  const saved=document.getElementById('ms-ep-saved');
+  saved.style.display='inline';
+  setTimeout(()=>saved.style.display='none',1500);
+  renderMsTimeline();
+}
+
+function msCancelEdit(){
+  document.getElementById('ms-edit-panel').style.display='none';
+  msCurRow=null; msCurMo=null;
+}
+
+function msSaveToSheet(){
+  const msg=document.getElementById('ms-ep-saved');
+  msg.style.display='inline';
+  msg.textContent='↗ 구글시트 저장 준비 완료';
+  setTimeout(()=>{msg.style.display='none';msg.textContent='✓ 적용됨';},2000);
+}
+
+// ══ 카카오 알림 탭 ══
+const KK_TRANSFERS=[
+  {day:1, amt:136200,   name:'토스뱅크 신용(득희) 이자',  owner:'득희', clr:'--amber'},
+  {day:5, amt:306747,   name:'보험료 합계',               owner:'공동', clr:'--t3'},
+  {day:10,amt:476230,   name:'관리비',                    owner:'공동', clr:'--t3'},
+  {day:17,amt:157160,   name:'토스뱅크 대환(득희) 이자',  owner:'득희', clr:'--amber'},
+  {day:19,amt:1912402,  name:'비래동 경락대출 이자(신협)',owner:'득희', clr:'--red'},
+  {day:19,amt:1116300,  name:'NH모바일 전세대출 이자',    owner:'득희', clr:'--red'},
+  {day:21,amt:150850,   name:'우리WON 직장인 이자',       owner:'호정', clr:'--blue'},
+  {day:25,amt:138875,   name:'카카오뱅크 신용 이자',      owner:'호정', clr:'--red'},
+  {day:27,amt:306747,   name:'토스뱅크 신용(호정) 이자', owner:'호정', clr:'--blue'},
+];
+const KK_TRIGGERS=[
+  {fn:'runMorningAlerts',     desc:'자동이체 하루 전 + 대출 만기 + 평창리', time:'매일 08:00'},
+  {fn:'reportDailyFinance',   desc:'일일 자금 현황 보고',                   time:'매일 09:00'},
+  {fn:'reportWeeklyFinance',  desc:'주간 수입·지출·순현금흐름 요약',        time:'매주 월 08:00'},
+  {fn:'reportMonthlySettlement',desc:'전월 결산 + 실질 총자산',             time:'매월 1일 09:00'},
+  {fn:'runMonthlyAlerts',     desc:'비래동 호실 월세 입금 확인',             time:'매월 10일 09:00'},
+];
+const KK_PREVIEWS={
+  transfer:{label:'자동이체 하루 전 알림',msg:`🔔 [자금관리] 내일(4월 19일) 자동이체 예정
+────────────────────
+💸 비래동 경락대출 이자(신협)
+   득희 · 191만 2,402원
+💸 NH모바일 전세대출 이자
+   득희 · 111만 6,300원
+────────────────────
+합계 302만 8,702원 출금 예정
+잔고 확인 후 준비해주세요 ✓`},
+  daily:{label:'일일 자금 현황',msg:`📊 [일일보고] 4/20(일) 자금 현황
+────────────────────
+💵 현금성 순자산
+   일반계좌      384만원
+   세이프(하이브)  2,412만원
+   세이프(호정)   2,284만원
+   신협 보증금    1,900만원
+   ━ 소계       6,980만원
+🏗 투자자산
+   하이브비래     8,683만원
+   서울린지 대여금  1,650만원
+⭐ 실질 총자산   1억 7,313만원`},
+  weekly:{label:'주간 자금 보고',msg:`📈 [주간보고] 4월 20일 기준 이번달
+────────────────────
+💰 수입 합계  1,832만원
+   하이브 60%  1,482만원
+   비래동 임대   265만원
+   육아급여     85만원
+────────────────────
+💸 지출 합계   439만원
+   고정비     383만원
+   변동비      56만원
+────────────────────
+✅ 순현금흐름  +1,393만원
+────────────────────
+📌 남은 자동이체
+   21일 우리WON: 15만원
+   25일 카카오뱅크: 14만원
+   27일 토스뱅크: 31만원`},
+  monthly:{label:'월별 결산 요약',msg:`🗓 [월간결산] 2026년 3월
+════════════════════
+📥 총수입  1억 6,632만원
+   하이브 60%  1,482만원
+   비래동 임대   205만원
+   서울린지   1,824만원
+   육아급여    10만원
+────────────────────
+📤 총지출   2,359만원
+   고정비    383만원
+   변동비    136만원
+   투자집행  1,840만원
+════════════════════
+✅ 순현금흐름  +1억 4,273만원
+────────────────────
+💵 현금성 순자산  7,945만원
+🏗 투자자산    10,333만원
+⭐ 실질 총자산  1억 8,278만원`},
+  loan:{label:'대출 만기 D-알림',msg:`🚨 [대출만기] D-7 알림
+────────────────────
+대출명: 카카오뱅크 신용
+명의: 호정
+잔액: 3,000만원
+금리: 5.505%
+만기일: 2026-09-30
+────────────────────
+💡 연장 or 대환 결정 필요
+타행 금리 비교 후 6월 中 확정`},
+  rent:{label:'비래동 월세 입금 확인',msg:`🏠 [비래동 월세] 4월 입금 확인
+────────────────────
+임차 가구: 4가구
+예상 수입: 265만원
+────────────────────
+⚠️ 미확인 1가구
+   301호 황문진: 60만원
+
+입금 확인 후 시트 업데이트 부탁드려요`},
+};
+
+function renderKakao(){
+  // 자동이체 테이블
+  const tbody=document.getElementById('kk-transfer-tbody');
+  if(tbody){
+    tbody.innerHTML=KK_TRANSFERS.map(t=>`
+      <tr style="border-bottom:1px solid var(--border3)">
+        <td style="padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--t3)">${t.day}일</td>
+        <td style="padding:7px 10px;font-size:12px;color:var(--t1)">${t.name}</td>
+        <td style="padding:7px 10px"><span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${t.owner==='호정'?'var(--b3)':t.owner==='득희'?'var(--a3)':'var(--bg3)'};color:${t.owner==='호정'?'var(--blue)':t.owner==='득희'?'var(--amber)':'var(--t3)'}">${t.owner}</span></td>
+        <td style="padding:7px 10px;font-family:var(--mono);font-size:12px;text-align:right;color:var(${t.clr})">${t.amt.toLocaleString('ko-KR')}</td>
+      </tr>`).join('')+`
+      <tr style="background:var(--bg2)">
+        <td colspan="3" style="padding:8px 10px;font-size:12px;font-weight:500;color:var(--t2)">월 합계</td>
+        <td style="padding:8px 10px;font-family:var(--mono);font-size:13px;font-weight:600;text-align:right;color:var(--red)">${KK_TRANSFERS.reduce((s,t)=>s+t.amt,0).toLocaleString('ko-KR')}</td>
+      </tr>`;
+  }
+  // 트리거 목록
+  const tl=document.getElementById('kk-trigger-list');
+  if(tl){
+    tl.innerHTML=KK_TRIGGERS.map(t=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border3)">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--t1);font-family:var(--mono)">${t.fn}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:1px">${t.desc}</div>
+        </div>
+        <div style="font-size:11px;color:var(--green);white-space:nowrap">${t.time}</div>
+      </div>`).join('');
+  }
+}
+
+function showKkPreview(type, el){
+  const p=KK_PREVIEWS[type];
+  if(!p) return;
+  document.getElementById('kk-preview-label').textContent=p.label;
+  document.getElementById('kk-preview-msg').textContent=p.msg;
+  document.querySelectorAll('#s-kakao .panel[onclick]').forEach(c=>{
+    c.style.border='0.5px solid var(--border)';
+    c.style.background='var(--bg1)';
+  });
+  if(el){el.style.border='1px solid var(--blue)';el.style.background='var(--b3)';}
+}
+
+
+// ── 평창리 슬라이더 시뮬레이터 ──────────────────────────
+function updatePyeong(){
+  const el=document.getElementById('pyeong-slider');
+  if(!el) return;
+  const val=parseInt(el.value);
+  const fwp=n=>{const a=Math.abs(Math.round(n*10000));if(a>=100000000)return Math.floor(a/100000000)+'억'+(a%100000000>0?' '+Math.round((a%100000000)/10000)+'만':'')+'원';if(a>=10000)return Math.round(a/10000)+'만원';return a.toLocaleString()+'원';};
+
+  document.getElementById('pyeong-val').textContent=fwp(val);
+
+  const loanRepay = Math.min(10000, val);
+  const aptBudget = val - loanRepay;
+  const aptLtv  = Math.round(aptBudget / 0.3);
+  const aptLtv4 = Math.round(aptBudget / 0.4);
+  const remain  = aptBudget - Math.min(aptBudget, 30000);
+
+  document.getElementById('pyeong-kpi').innerHTML=`
+    <div class="kc"><div class="klb">신용대출 상환</div><div class="kval vr">${fwp(loanRepay)}</div><div class="ksub">토스뱅크 5.57%</div></div>
+    <div class="kc"><div class="klb">아파트 매수 재원</div><div class="kval vg">${fwp(aptBudget)}</div><div class="ksub">회수액 - 대출상환</div></div>
+    <div class="kc"><div class="klb">매수 가능 아파트가<br><span style="font-size:10px">(자기자본 30%)</span></div><div class="kval vb">${fwp(aptLtv)}</div></div>
+    <div class="kc"><div class="klb">매수 가능 아파트가<br><span style="font-size:10px">(자기자본 40%)</span></div><div class="kval vo">${fwp(aptLtv4)}</div></div>`;
+
+  const items=[
+    {label:'신용대출 1억 상환',  amt:loanRepay,                                            color:'var(--red)',  note:'토스뱅크 5.57% 소멸'},
+    {label:'아파트 계약금',      amt:Math.min(aptBudget,Math.round(110000/10)),            color:'var(--blue)', note:'11억 기준 10%'},
+    {label:'잔금 자기자본',      amt:Math.max(0,aptBudget-Math.round(110000/10)-5000),     color:'var(--green)',note:'잔금 중 대출 외 부분'},
+    {label:'예비·운영자금',      amt:Math.max(0,remain),                                   color:'var(--amber)',note:'서울린지 운영 등'},
+  ];
+  const tot=items.reduce((s,i)=>s+i.amt,0)||1;
+  document.getElementById('pyeong-plan').innerHTML=items.map(i=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <span style="font-size:12px;color:var(--t2);width:130px;flex-shrink:0">${i.label}</span>
+      <div style="flex:1;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden">
+        <div style="width:${Math.round(i.amt/tot*100)}%;height:7px;background:${i.color};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <span style="font-size:12px;font-family:var(--mono);color:${i.color};width:80px;text-align:right">${fwp(i.amt)}</span>
+      <span style="font-size:11px;color:var(--t3);width:120px">${i.note}</span>
+    </div>`).join('');
+
+  let aiTxt='';
+  if(val>=45000)      aiTxt=`회수액 ${fwp(val)} — 최대 시나리오. 신용대출 1억 상환 후 ${fwp(aptBudget)} 잔존. 자기자본 30% 기준 ${fwp(aptLtv)} 아파트 매수 가능. 11억 이하 서울 아파트 목표에 부합합니다.`;
+  else if(val>=35000) aiTxt=`회수액 ${fwp(val)} — 양호. 신용대출 상환 후 ${fwp(aptBudget)} 잔존. 자기자본 30~40% 투입 시 ${fwp(aptLtv4)}~${fwp(aptLtv)} 수준 매수 가능.`;
+  else if(val>=25000) aiTxt=`회수액 ${fwp(val)} — 보수적 시나리오. 아파트 매수 재원 ${fwp(aptBudget)}. 대출 비중이 높아질 수 있어 DSR 재계산 필요.`;
+  else                aiTxt=`회수액 ${fwp(val)} — 예상보다 낮은 회수 시. 서울 아파트 매수 규모를 조정하거나 매수 시기를 미루는 것이 좋습니다.`;
+  document.getElementById('pyeong-ai').textContent=aiTxt;
+}
+
+setTimeout(()=>updatePyeong(),500);
+
+// 초기화 — 시트 동기화 후 렌더
+setTimeout(async ()=>{
+  await syncAll(false);
+  renderNW('all');
+  renderNWChart();
+},150);
+</script>
+</body>
+</html>
