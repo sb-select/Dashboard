@@ -163,6 +163,53 @@ input[type=range]{flex:1;height:4px;accent-color:var(--blue);cursor:pointer}
 /* credit score ring */
 .score-ring{display:flex;flex-direction:column;align-items:center;gap:6px}
 .ring-val{font-size:28px;font-weight:600;font-family:var(--mono)}
+
+/* ── 모바일 반응형 ── */
+@media(max-width:768px){
+  html,body{overflow:auto}
+  .app{flex-direction:column;height:auto;min-height:100vh}
+  /* 사이드바 → 상단 네비게이션 바 */
+  .sb{width:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;height:auto;border-right:none;border-bottom:1px solid var(--border);padding-bottom:0;flex-shrink:0}
+  .sb::-webkit-scrollbar{height:2px}.sb::-webkit-scrollbar-thumb{background:var(--bg4)}
+  .sb-head{padding:12px 14px;border-bottom:none;border-right:1px solid var(--border);flex-shrink:0;min-width:120px}
+  .sb-brand{font-size:12px}.sb-ver{font-size:9px}
+  .sb-sec{display:none}
+  .sb-foot{display:none}
+  .nav{padding:12px 14px;border-left:none;border-bottom:2px solid transparent;white-space:nowrap;flex-shrink:0;font-size:12px}
+  .nav.on{border-left-color:transparent;border-bottom-color:var(--blue)}
+  .nav svg{display:none}
+  .nbadge{display:none}
+  /* 메인 콘텐츠 */
+  .main{overflow:visible;height:auto}
+  .topbar{padding:10px 14px;flex-wrap:wrap;gap:8px}
+  .pg-title{font-size:14px}.pg-sub{font-size:11px}
+  .tb-ver{font-size:11px;padding:4px 10px}
+  #sync-btn{font-size:11px;padding:4px 10px}
+  .content{padding:14px;overflow:visible;height:auto}
+  /* 히어로 그리드 */
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .kgrid{grid-template-columns:1fr 1fr !important}
+  /* 패널 */
+  .panel{padding:12px 14px}
+  /* 그리드 2컬럼 → 1컬럼 */
+  .grid2,.col2{grid-template-columns:1fr !important}
+  /* 마일스톤 타임라인 — 가로 스크롤 유지 */
+  .tl-wrap{overflow-x:auto}
+  /* 차트 높이 축소 */
+  canvas{max-height:200px}
+  /* 부채 바 */
+  .debt-grid{grid-template-columns:1fr}
+  /* 모달 */
+  .modal{width:95vw;max-height:90vh;overflow-y:auto}
+  /* 카카오 알림 카드 */
+  #s-kakao .grid2{grid-template-columns:1fr !important}
+}
+@media(max-width:480px){
+  .hero-grid{grid-template-columns:1fr}
+  .kgrid{grid-template-columns:1fr !important}
+  .topbar .tb-ver{display:none}
+  body{font-size:13px}
+}
 </style>
 </head>
 <body>
