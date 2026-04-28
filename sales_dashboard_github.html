@@ -2303,8 +2303,6 @@ function parsePLDataFromSheets(allSheets) {
     if (rows.length < 2) continue;
     const h = rows[0];
 
-      const h = rows[0];
-
       if(sheetName === '손익_수기DB') {
         const iD=h.indexOf('날짜'), iC=h.indexOf('채널/업체'),
               iT=h.indexOf('유형'), iI=h.indexOf('항목'), iA=h.indexOf('금액');
