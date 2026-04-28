@@ -344,8 +344,10 @@
     <span class="tag tag-bd" id="hd-period">-</span>
   </div>
   <div class="hd-right">
+    <span id="hd-data-range" style="font-size:10px;color:var(--dim);font-family:'Space Mono',monospace;"></span>
     <span id="clk"></span>
     <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+    <button class="refresh-btn" style="background:rgba(95,184,245,0.1);border-color:rgba(95,184,245,0.3);color:var(--b);" onclick="loadData(true)" title="전체 기간 데이터 로드">전체 로드</button>
   </div>
 </header>
 
@@ -1277,77 +1279,107 @@ function applyFilter() {
 }
 
 // ─────────────────────────────────────────
-// 구글 시트 데이터 로드 (범위 제한으로 속도 개선)
+// 구글 시트 데이터 로드 (startDate 파라미터로 서버측 필터링)
 // ─────────────────────────────────────────
 
-// 필요한 컬럼만 읽기 (A=저장일시, B=주문일, C=주문번호, D=판매처, E=상품명, F=옵션명, G=수량, H=금액)
-// 전체 기간 버튼 선택시에만 전체 로드, 나머지는 최근 3개월만
+// forceAll=false: 최근 3개월치만 요청 (startDate 파라미터 전달)
+// forceAll=true : 전체 기간 요청 ("전체" 버튼 클릭 시)
 async function loadData(forceAll = false) {
   showLoading(true);
+
+  // ── 워밍업 ping (콜드스타트 대응) ──────────────────────
+  // 첫 요청 전에 ping을 먼저 쏴서 Apps Script 컨테이너를 깨움
+  // ping은 응답 기다리지 않고 fire-and-forget
+  fetch(CONFIG.webAppUrl + '?action=ping').catch(()=>{});
+
   try {
-    const url = CONFIG.webAppUrl + '?action=getData&sheet=' + encodeURIComponent(CONFIG.dbSheet);
+    // startDate 계산: 이번달 포함 3개월 전 1일
+    let startDate = '';
+    if (!forceAll) {
+      const now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Seoul'}));
+      const y = now.getFullYear();
+      const m = now.getMonth() - 2; // 3개월 전
+      const d = new Date(y, m, 1);
+      startDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+    }
+
+    // ── 단일 요청으로 전체 데이터 로드 (getAllData) ──────
+    // 기존: 누적_DB 1회 + 손익_DB 등 5회 = 총 6회 요청
+    // 변경: getAllData 1회로 6개 시트 한꺼번에 수신
+    const params = new URLSearchParams({ action: 'getAllData' });
+    if (startDate) params.append('startDate', startDate);
+
+    const url = CONFIG.webAppUrl + '?' + params.toString();
     const res = await fetch(url);
     if(!res.ok) throw new Error(`API 오류: ${res.status}`);
     const json = await res.json();
     if(!json.ok) throw new Error(json.error || '데이터 로드 실패');
 
-    const rows = json.data || [];
-    if(rows.length < 2) { RAW_DATA = []; applyFilter(); showLoading(false); return; }
+    // getAllData 응답: { ok, sheets: { 누적_DB:[...], 손익_DB:[...], ... }, total, filtered }
+    const allSheets = json.sheets || {};
 
-    // 첫 행 헤더로 컬럼 인덱스 찾기
-    const headers = rows[0];
-    const iDate    = headers.indexOf('주문일');
-    const iOrderNo = headers.indexOf('주문번호');
-    const iChannel = headers.indexOf('판매처');
-    const iProd    = headers.indexOf('상품명');
-    const iOpt     = headers.indexOf('옵션명');
-    const iQty     = headers.indexOf('수량');
-    const iAmt     = headers.indexOf('금액');
+    // ── 누적_DB 파싱 ──
+    const rows = allSheets['누적_DB'] || [];
+    if(rows.length < 2) { RAW_DATA = []; }
+    else {
+      const headers = rows[0];
+      const iDate    = headers.indexOf('주문일');
+      const iOrderNo = headers.indexOf('주문번호');
+      const iChannel = headers.indexOf('판매처');
+      const iProd    = headers.indexOf('상품명');
+      const iOpt     = headers.indexOf('옵션명');
+      const iQty     = headers.indexOf('수량');
+      const iAmt     = headers.indexOf('금액');
 
-    // 날짜 파싱 헬퍼 (datetime/숫자/문자열 모두 처리)
-    const parseOrderDate = (v) => {
-      if(!v && v!==0) return '';
-      // Date 객체
-      if(v instanceof Date) return v.toISOString().substring(0,10);
-      const s = String(v).trim();
-      // ISO 형식 (T 포함) → KST 변환
-      if(/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-        const d = new Date(s);
-        const kst = new Date(d.getTime() + 9*60*60*1000);
-        return kst.toISOString().substring(0,10);
+      const parseOrderDate = (v) => {
+        if(!v && v!==0) return '';
+        if(v instanceof Date) return v.toISOString().substring(0,10);
+        const s = String(v).trim();
+        if(/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+          const d = new Date(s);
+          const kst = new Date(d.getTime() + 9*60*60*1000);
+          return kst.toISOString().substring(0,10);
+        }
+        if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+        if(typeof v === 'number' && v > 40000) {
+          const d = new Date(Math.round((v-25569)*86400*1000));
+          return d.toISOString().substring(0,10);
+        }
+        if(/^\d{4}\/\d{2}\/\d{2}/.test(s)) return s.replace(/\//g,'-').substring(0,10);
+        if(/^[A-Za-z]/.test(s)) {
+          const d = new Date(s);
+          if(!isNaN(d.getTime())) return d.toISOString().substring(0,10);
+        }
+        return s.substring(0,10);
+      };
+
+      RAW_DATA = rows.slice(1).map(r => ({
+        orderDate: parseOrderDate(r[iDate]),
+        orderNo:   String(r[iOrderNo]||'').trim(),
+        channel:   r[iChannel]||'',
+        product:   r[iProd]||'',
+        option:    r[iOpt]||'',
+        qty:       parseInt(r[iQty])||0,
+        amount:    parseInt(r[iAmt])||0,
+      })).filter(r => r.orderDate && r.orderDate.length===10 && r.channel);
+    }
+    console.log('[누적_DB] 로드:', RAW_DATA.length, '건', forceAll ? '(전체)' : `(${startDate} 이후)`);
+
+    // 헤더 로드 범위 표시
+    const rangeTag = document.getElementById('hd-data-range');
+    if (rangeTag) {
+      if (!forceAll && json.total && json.total > json.filtered) {
+        rangeTag.textContent = `3개월 ${json.filtered.toLocaleString()}건 / 전체 ${json.total.toLocaleString()}건`;
+      } else {
+        rangeTag.textContent = `전체 ${RAW_DATA.length.toLocaleString()}건`;
       }
-      // YYYY-MM-DD 또는 YYYY-MM-DD HH:MM:SS
-      if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
-      // 엑셀 시리얼 숫자
-      if(typeof v === 'number' && v > 40000) {
-        const d = new Date(Math.round((v-25569)*86400*1000));
-        return d.toISOString().substring(0,10);
-      }
-      // YYYY/MM/DD
-      if(/^\d{4}\/\d{2}\/\d{2}/.test(s)) return s.replace(/\//g,'-').substring(0,10);
-      // Date 문자열
-      if(/^[A-Za-z]/.test(s)) {
-        const d = new Date(s);
-        if(!isNaN(d.getTime())) return d.toISOString().substring(0,10);
-      }
-      return s.substring(0,10);
-    };
+    }
 
-    RAW_DATA = rows.slice(1).map(r => ({
-      orderDate: parseOrderDate(r[iDate]),
-      orderNo:   String(r[iOrderNo]||'').trim(),
-      channel:   r[iChannel]||'',
-      product:   r[iProd]||'',
-      option:    r[iOpt]||'',
-      qty:       parseInt(r[iQty])||0,
-      amount:    parseInt(r[iAmt])||0,
-    })).filter(r => r.orderDate && r.orderDate.length===10 && r.channel);
-    console.log('[누적_DB] 로드:', RAW_DATA.length, '건', RAW_DATA[0]);
+    // ── 손익 관련 시트 파싱 (getAllData에서 함께 수신) ──
+    parsePLDataFromSheets(allSheets);
 
-    buildMonthOptions(); // 월 드롭다운 업데이트
+    buildMonthOptions();
     applyFilter();
-    // 손익 DB 추가 로드
-    await loadPLData();
     showLoading(false);
   } catch(e) {
     showLoading(false);
@@ -2261,21 +2293,19 @@ let PL_MONTH   = '';  // 현재 선택 월 (단일)
 let PL_MONTHS  = []; // 멀티 선택 월 배열 (스택 비교용)
 let PL_EXPANDED = {}; // 펼친 행 상태
 
-async function loadPLData() {
-  try {
-    const sheets = ['손익_DB','광고_DB','손익_수기DB','정산_DB','마케팅_DB'];
-    const targets = [COGS_DATA, AD_DATA, MANUAL_PL, SETTLE_DATA, MKT_DATA];
+// loadPLData는 getAllData에서 함께 수신하므로 별도 fetch 불필요
+// parsePLDataFromSheets: allSheets 객체를 받아 각 시트 파싱
+function parsePLDataFromSheets(allSheets) {
+  const sheetNames = ['손익_DB','광고_DB','손익_수기DB','정산_DB','마케팅_DB'];
 
-    for(let i=0; i<sheets.length; i++) {
-      const url = CONFIG.webAppUrl + '?action=getData&sheet=' + encodeURIComponent(sheets[i]);
-      const res = await fetch(url);
-      if(!res.ok) continue;
-      const json = await res.json();
-      const rows = json.data || [];
-      if(rows.length < 2) continue;
+  for (const sheetName of sheetNames) {
+    const rows = allSheets[sheetName] || [];
+    if (rows.length < 2) continue;
+    const h = rows[0];
+
       const h = rows[0];
 
-      if(sheets[i] === '손익_수기DB') {
+      if(sheetName === '손익_수기DB') {
         const iD=h.indexOf('날짜'), iC=h.indexOf('채널/업체'),
               iT=h.indexOf('유형'), iI=h.indexOf('항목'), iA=h.indexOf('금액');
 
@@ -2322,7 +2352,7 @@ async function loadPLData() {
         });
         MANUAL_PL = Array.from(plMap.values());
         console.log('[손익_수기DB] 로드:', MANUAL_PL.length, '건 (중복제거 후)');
-      } else if(sheets[i] === '손익_DB') {
+      } else if(sheetName === '손익_DB') {
         // 손익_DB 컬럼: 저장일시(0)|날짜(1)|채널/업체(2)|유형(3)|항목(4)|금액(5)|구분(6)
         // 헤더 감지: 2번째 컬럼이 실제 날짜값이면 헤더없는 것 (선언 먼저)
         const cogsFirstDate = h[1];
@@ -2368,11 +2398,12 @@ async function loadPLData() {
           type:     r[iType]||'매입원가',
         })).filter(r=>r.date && r.date.length===10 && r.amount>0);
         console.log('[손익_DB] 로드:', COGS_DATA.length, '건');
-      } else if(sheets[i] === '정산_DB') {
+      } else if(sheetName === '정산_DB') {
         // 헤더: 저장일시|지급일|주문금액합계|지급액(정산)|결제수수료합계|상품판매수수료|쿠폰할인부담|비고
         const iD=h.indexOf('지급일'), iO=h.indexOf('주문금액합계'),
               iP=h.indexOf('지급액(정산)'), iF=h.indexOf('결제수수료합계'),
-              iCh=h.indexOf('비고'); // 채널 구분 (찐맛집, 쿠팡 등)
+              iChNew=h.indexOf('채널'), // 새 채널 컬럼 (정산저장_채널별 함수로 저장시)
+              iCh=h.indexOf('비고');   // 구버전 채널 구분
         const parseSDate = (v) => {
           if(!v && v!==0) return '';
           const s = String(v).trim();
@@ -2392,12 +2423,15 @@ async function loadPLData() {
         SETTLE_DATA = rows.slice(1).map(r=>{
           const ds = parseSDate(r[iD]);
           // 비고 컬럼으로 채널 파싱 - 부분 포함 검색 (쿠팡_4월, 네이버_3월 등 처리)
-          const bigo = iCh>=0 ? String(r[iCh]||'').trim() : '';
-          const channel = bigo.includes('찐맛집') ? '찐맛집'
+          // 새 채널 컬럼 우선, 없으면 비고 컬럼으로 파싱
+          const newCh = iChNew>=0 ? String(r[iChNew]||'').trim() : '';
+          const bigo  = iCh>=0   ? String(r[iCh]||'').trim()    : '';
+          const channel = newCh ? newCh
+                        : bigo.includes('찐맛집') ? '찐맛집'
                         : bigo.includes('쿠팡')   ? '쿠팡'
                         : bigo.includes('네이버')  ? '네이버'
                         : bigo.includes('올웨이즈') ? '올웨이즈'
-                        : '선별상회'; // 비고 없으면 선별상회 기본값
+                        : '선별상회';
           return {
             date:     ds,
             month:    ds.substring(0,7),
@@ -2409,7 +2443,7 @@ async function loadPLData() {
         }).filter(r=>r.date && r.date.length===10);
         console.log('[정산_DB] 로드:', SETTLE_DATA.length, '건', '채널별:', [...new Set(SETTLE_DATA.map(r=>r.channel))].join('/'));
 
-      } else if(sheets[i] === '마케팅_DB') {
+      } else if(sheetName === '마케팅_DB') {
         // 헤더: 저장일시 | 날짜 | 업체 | 금액 | 항목
         const iD=h.indexOf('날짜'), iV=h.indexOf('업체'),
               iA=h.indexOf('금액'), iI=h.indexOf('항목');
@@ -2472,7 +2506,12 @@ async function loadPLData() {
     renderPL();
     updateHeroCards(); // 손익 데이터 로드 완료 후 히어로 카드 갱신
   } catch(e) { console.log('손익 로드 실패:', e); }
+  }
+  buildPLMonthBtns();
+  renderPL();
+  updateHeroCards();
 }
+
 
 function buildPLMonthBtns() {
   const months = new Set();
@@ -2600,12 +2639,20 @@ function getPLDailyData(month) {
   SETTLE_DATA.filter(r=>r.month===month).forEach(r=>{
     if(!dayMap[r.date]) return;
     const key = `${r.date}|${r.channel}`;
-    // 수기DB에 해당 채널 정산이 있으면 skip
     const hasManualSettle = MANUAL_PL.some(m=>m.date===r.date&&m.type==='정산금액'&&m.item===r.channel);
     if(!hasManualSettle && !settleApplied.has(key)) {
       dayMap[r.date].settlement += r.payAmt;
+      // 채널별 정산도 저장
+      if(!dayMap[r.date].settlementByChannel) dayMap[r.date].settlementByChannel = {};
+      dayMap[r.date].settlementByChannel[r.channel] = (dayMap[r.date].settlementByChannel[r.channel]||0) + r.payAmt;
       settleApplied.add(key);
     }
+  });
+  // 수기DB 정산금액도 채널별로 저장
+  MANUAL_PL.filter(r=>r.month===month&&r.type==='정산금액').forEach(r=>{
+    if(!dayMap[r.date]) return;
+    if(!dayMap[r.date].settlementByChannel) dayMap[r.date].settlementByChannel = {};
+    dayMap[r.date].settlementByChannel[r.item] = (dayMap[r.date].settlementByChannel[r.item]||0) + r.amount;
   });
 
   // 손익_DB (매입원가) - 수기DB와 합산 (중복 없이)
@@ -3090,7 +3137,7 @@ function renderPLTable() {
     csRow+=`</tr>`;
 
     // 정산금액(실제입금액) 행
-    let wSettle=0;
+    let wSettle=0, wSettleToss=0, wSettleJjin=0, wSettleCp=0;
     let settlementRow=`<tr style="background:rgba(45,212,191,0.04);border-top:2px solid var(--bd);">
       <td class="row-label" style="color:var(--c);font-weight:700;">정산금액<span style="display:block;font-size:13px;color:var(--mid);font-weight:400;">(실제입금)</span></td>`;
     colKeys.forEach(col=>{
@@ -3108,6 +3155,31 @@ function renderPLTable() {
     settlementRow+=totalCell(wSettle,'var(--c)',wSettleRate);
     settlementRow+=`</tr>`;
 
+    // 정산금액 채널별 서브행 (상세 체크시)
+    let settleSubRows = '';
+    const settleChannels = [
+      {name:'선별상회', color:'#7a93b0'},
+      {name:'찐맛집',   color:'#c084fc'},
+      {name:'쿠팡',     color:'#ff9c52'},
+    ];
+    settleChannels.forEach(({name, color}) => {
+      let wCh = 0;
+      let row = `<tr class="sub-row" data-wksub="${wkId}" style="display:none;background:rgba(45,212,191,0.02);">
+        <td class="row-label" style="color:${color};font-size:12px;padding-left:24px;">└ ${name}</td>`;
+      colKeys.forEach(col => {
+        const info=wk.map[col]; if(!info){row+=`<td></td>`;return;}
+        const {dateKey}=info; const isWe=col>=5;
+        const d2 = dayMap[dateKey]||{};
+        const sv = (d2.settlementByChannel||{})[name]||0;
+        wCh += sv;
+        row += `<td style="${isWe?'background:rgba(255,156,82,0.03);':''}">
+          <span style="color:${sv>0?color:'var(--dim)'};font-size:12px;">${sv>0?fw(sv):'-'}</span>
+        </td>`;
+      });
+      row += `<td style="text-align:right;font-size:12px;color:${wCh>0?color:'var(--dim)'};">${wCh>0?fw(wCh):'-'}</td></tr>`;
+      settleSubRows += row;
+    });
+
     html+=`
       <div style="margin-bottom:${wi<weeks.length-1?'24px':'0'};">
         <div style="font-size:14px;color:var(--tx);font-weight:700;margin-bottom:10px;padding:6px 12px;background:var(--s3);border-radius:6px;display:inline-block;">
@@ -3121,7 +3193,7 @@ function renderPLTable() {
               ${cogsRow}${cogsSubRows}
               ${adRow}${roasRow}${adSubRows}
               ${csRow}
-              ${settlementRow}
+              ${settlementRow}${settleSubRows}
             </tbody>
           </table>
         </div>
@@ -3876,12 +3948,16 @@ function showHeroModal(type) {
   runningSum = 0;
 
   // 테이블
-  let html = `<table class="dt"><thead><tr><th>월</th><th class="tr">${needsCumSum?'누적 ':''}금액</th><th class="tr">월별 증감</th></tr></thead><tbody>`;
+  // 누적형은 누적+월별 둘다 표시
+  const headers2 = needsCumSum
+    ? `<th>월</th><th class="tr">월별 금액</th><th class="tr">누적 금액</th><th class="tr">전월대비</th>`
+    : `<th>월</th><th class="tr">금액</th><th class="tr">전월대비</th>`;
+  let html = `<table class="dt"><thead><tr>${headers2}</tr></thead><tbody>`;
   let prevRaw = 0;
   runningSum = 0;
   nowMonths.forEach(m => {
     const raw = getMonthVal(m);
-    const display = needsCumSum ? (runningSum += raw) : raw;
+    const cumVal = needsCumSum ? (runningSum += raw) : raw;
     const mn = m.slice(5,7);
     const diff = raw - prevRaw;
     const pct  = prevRaw > 0 ? (diff / Math.abs(prevRaw) * 100).toFixed(1) : null;
@@ -3891,11 +3967,20 @@ function showHeroModal(type) {
            <span style="font-size:10px;opacity:0.8;">(${diff>=0?'▲':'▼'}${Math.abs(pct)}%)</span>
          </span>`
       : `<span style="color:var(--mid);">-</span>`;
-    html += `<tr>
-      <td style="font-weight:600;">${MN[mn]||m}</td>
-      <td class="tr" style="font-family:'Space Mono',monospace;font-weight:700;">${isRate?display+'%':fw(display)}</td>
-      <td class="tr">${diffStr}</td>
-    </tr>`;
+    if(needsCumSum) {
+      html += `<tr>
+        <td style="font-weight:600;">${MN[mn]||m}</td>
+        <td class="tr" style="font-family:'Space Mono',monospace;">${fw(raw)}</td>
+        <td class="tr" style="font-family:'Space Mono',monospace;font-weight:700;color:var(--g);">${fw(cumVal)}</td>
+        <td class="tr">${diffStr}</td>
+      </tr>`;
+    } else {
+      html += `<tr>
+        <td style="font-weight:600;">${MN[mn]||m}</td>
+        <td class="tr" style="font-family:'Space Mono',monospace;font-weight:700;">${isRate?cumVal+'%':fw(cumVal)}</td>
+        <td class="tr">${diffStr}</td>
+      </tr>`;
+    }
     prevRaw = raw;
   });
   html += '</tbody></table>';
